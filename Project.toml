@@ -1,0 +1,9 @@
+name = "FastGaussianProcesses"
+uuid = "0daff098-cd89-4feb-a73f-3cd5564178fe"
+authors = ["alegresor agsorokin3@gmail.com"]
+version = "1.0.0"
+
+[deps]
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+Hadamard = "4a05ff16-5f95-55f4-bb53-bb3f467c689a"
+QMCGenerators = "fcae8fc2-2969-4f4b-b6c9-a95746d81969"
