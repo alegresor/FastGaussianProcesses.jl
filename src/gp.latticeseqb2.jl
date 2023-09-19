@@ -58,9 +58,22 @@ function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2
     GaussianProcessLatticeSeqB2(s,f,n,o,γ,η,partial_orders,n_orders,x,y,ytilde,ktilde,coeffs)
 end
 
-function mean_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64})
-    kmat = [kernel_lattice(x,gp.x[i,:],gp.o,gp.γ,gp.η,zeros(Int64,gp.s),gp.partial_orders[j,:],gp.s) for i=1:gp.n,j=1:gp.n_orders]
+function mean_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64},partial_order::Vector{Int64})
+    kmat = [kernel_lattice(x,gp.x[i,:],gp.o,gp.γ,gp.η,partial_order,gp.partial_orders[j,:],gp.s) for i=1:gp.n,j=1:gp.n_orders]
     sum(gp.coeffs.*kmat)
 end 
 
-(gp::GaussianProcessLatticeSeqB2)(x::Vector{Float64}) = mean_post(gp,x)
+(gp::GaussianProcessLatticeSeqB2)(x::Vector{Float64},partial_order::Vector{Int64}) = mean_post(gp,x,partial_order)
+
+function cov_post(gp::GaussianProcessLatticeSeqB2,x1::Vector{Float64},x2::Vector{Float64},partial_x1_order::Vector{Int64},partial_x2_order::Vector{Int64})
+    kval = kernel_lattice(x1,x2,gp.o,gp.γ,gp.η,partial_x1_order,partial_x2_order,gp.s)
+    k1vec = [kernel_lattice(x1,gp.x[i,:],gp.o,gp.γ,gp.η,partial_x1_order,gp.partial_orders[j,:],gp.s) for i=1:gp.n,j=1:gp.n_orders]
+    k2vec = [kernel_lattice(x2,gp.x[i,:],gp.o,gp.γ,gp.η,partial_x2_order,gp.partial_orders[j,:],gp.s) for i=1:gp.n,j=1:gp.n_orders]
+    k2vectilde = fft(k2vec,1)
+    freqs = zeros(ComplexF64,gp.n,gp.n_orders)
+    for i=1:gp.n freqs[i,:] = gp.ktilde[i,:,:]\k2vectilde[i,:] end 
+    coeffs = real.(ifft(freqs,1))
+    kval-sum(k1vec.*coeffs)
+end
+
+var_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64},partial_order::Vector{Int64}) = cov_post(gp,x,x,partial_order,partial_order)
