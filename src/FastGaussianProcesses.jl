@@ -3,6 +3,7 @@ module FastGaussianProcesses
 using QMCGenerators
 import FFTW: fft, ifft
 import Hadamard: fwht_natural,ifwht_natural
+import LinearAlgebra: logdet 
 
 include("gp.latticeseqb2.jl")
 export kernel_lattice,GaussianProcessLatticeSeqB2

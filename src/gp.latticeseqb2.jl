@@ -37,7 +37,7 @@ mutable struct GaussianProcessLatticeSeqB2
     coeffs::Matrix{Float64}
 end
 
-function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2,RandomShift},o::Int64,γ::Float64,η::Vector{Float64},partial_orders::Matrix{Int64})
+function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2,RandomShift},o::Int64,γ::Float64,η::Vector{Float64},ζ::Vector{Float64},partial_orders::Matrix{Int64})
     @assert log2(n)%1==0
     m = Int64(log2(n))
     x = FirstLinear(ls,m)
@@ -46,15 +46,8 @@ function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2
     @assert size(partial_orders,2)==s
     y = [f(x[i,:],partial_orders[j,:]) for i=1:n,j=1:n_orders]
     ytilde = fft(y,1)
-    ktilde = zeros(ComplexF64,n,n_orders,n_orders)
-    for k=0:n_orders-1
-        for j=0:n_orders-1 # TODO use symmetry and real only / imag only to make more efficient
-            ktilde[:,k+1,j+1] = fft([kernel_lattice(x[i,:],x[1,:],o,γ,η,partial_orders[k+1,:],partial_orders[j+1,:],s) for i=1:n])
-        end
-    end
-    freqs = zeros(ComplexF64,n,n_orders)
-    for i=1:n freqs[i,:] = ktilde[i,:,:]\ytilde[i,:] end 
-    coeffs = real.(ifft(freqs,1))
+    ktilde = fft([kernel_lattice(x[i,:],x[1,:],o,γ,η,partial_orders[k+1,:],partial_orders[j+1,:],s)+ζ[k+1]*(k==j) for i=1:n,k=0:n_orders-1,j=0:n_orders-1],1)
+    coeffs = real.(ifft(permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...)),1))
     GaussianProcessLatticeSeqB2(s,f,n,o,γ,η,partial_orders,n_orders,x,y,ytilde,ktilde,coeffs)
 end
 
@@ -70,9 +63,7 @@ function cov_post(gp::GaussianProcessLatticeSeqB2,x1::Vector{Float64},x2::Vector
     k1vec = [kernel_lattice(x1,gp.x[i,:],gp.o,gp.γ,gp.η,partial_x1_order,gp.partial_orders[j,:],gp.s) for i=1:gp.n,j=1:gp.n_orders]
     k2vec = [kernel_lattice(x2,gp.x[i,:],gp.o,gp.γ,gp.η,partial_x2_order,gp.partial_orders[j,:],gp.s) for i=1:gp.n,j=1:gp.n_orders]
     k2vectilde = fft(k2vec,1)
-    freqs = zeros(ComplexF64,gp.n,gp.n_orders)
-    for i=1:gp.n freqs[i,:] = gp.ktilde[i,:,:]\k2vectilde[i,:] end 
-    coeffs = real.(ifft(freqs,1))
+    coeffs = real.(ifft(permutedims(hcat(map(i->gp.ktilde[i,:,:]\k2vectilde[i,:],1:gp.n)...)),1))
     kval-sum(k1vec.*coeffs)
 end
 
