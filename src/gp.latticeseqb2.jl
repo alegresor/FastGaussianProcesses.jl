@@ -52,7 +52,7 @@ function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2
     @assert size(partial_orders,2)==s
     y = [f(x[i,:],partial_orders[l,:]) for i=1:n,l=1:r]
     ytilde = fft(y,1)
-    losses,γs,ηs,ζs = zeros(Float64,optim_steps+1),zeros(Float64,optim_steps+1),zeros(Float64,optim_steps+1,s),zeros(Float64,optim_steps,r)
+    losses,γs,ηs,ζs = zeros(Float64,optim_steps+1),zeros(Float64,optim_steps+1),zeros(Float64,optim_steps+1,s),zeros(Float64,optim_steps+1,r)
     if verbosebool println("QGP Optimization Loss") end
     Δ = zeros(Float64,p)
     for step=1:optim_steps
@@ -82,8 +82,11 @@ function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2
         θ = exp.(log.(θ)-learningrate*Δ.^(-1/2).*∂L∂logθ)
         γ = θ[1]; η = θ[2:1+s]; ζ = θ[2+s:end]
     end
-    ktilde = fft([kernel_lattice(x[i,:],x[1,:],o,γ,η,partial_orders[k,:],partial_orders[l,:],s)+ζ[k]*(k==l) for i=1:n,k=1:r,l=1:r],1)
-    coeffs = real.(ifft(permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...)),1))
+    ktilde = fft([kernel_lattice(x[i,:],x[1,:],o,γ,η,partial_orders[k,:],partial_orders[l,:],s)+ζ[k]*(k==l)*(i==1) for i=1:n,k=1:r,l=1:r],1)
+    coeffs_perm = permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...))
+    losses[end] = real.(sum(map(i->logdet(ktilde[i,:,:]),1:n))+sum(conj.(ytilde).*coeffs_perm))
+    γs[end] = γ; ηs[end,:] = η; ζs[end,:] = ζ
+    coeffs = real.(ifft(coeffs_perm,1))
     GaussianProcessLatticeSeqB2(s,f,n,o,γ,η,partial_orders,r,x,y,ytilde,ktilde,coeffs,losses,γs,ηs,ζs)
 end
 
