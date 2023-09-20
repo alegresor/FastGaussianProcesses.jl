@@ -44,6 +44,7 @@ function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2
     x = FirstLinear(ls,m)
     s = size(x,2)
     r = size(partial_orders,1)
+    p = 1+s+r
     @assert size(partial_orders,2)==s
     y = [f(x[i,:],partial_orders[l,:]) for i=1:n,l=1:r]
     ytilde = fft(y,1)
@@ -52,24 +53,28 @@ function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2
     for step=1:optim_steps
         γs[step] = γ; ηs[step,:] = η; ζs[step,:] = ζ
         kvals = [kernel_lattice(x[i,:],x[1,:],o,γ,η,partial_orders[k,:],partial_orders[l,:],s) for i=1:n,k=1:r,l=1:r]
-        kvalsnoisy = copy(kvals); for k=1:r kvalsnoisy[1,k,k] = kvalsnoisy[1,k,k]+ζ[k]
+        kvalsnoisy = copy(kvals); for k=1:r kvalsnoisy[1,k,k] = kvalsnoisy[1,k,k]+ζ[k] end
         ktilde = fft(kvalsnoisy,1)
-        coeffs = real.(ifft(permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...)),1))
-        losses[step] = sum(map(i->logdet(ktilde[i,:,:]),1:n))+sum(y.*coeffs)
-        
-        # TODO complete optimization
-        ∂γ∂logγ,∂η∂logη,∂ζ∂logζ = γ,η,ζ
+        coeffs_perm = permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...))
+        losses[step] = real.(sum(map(i->logdet(ktilde[i,:,:]),1:n))+sum(conj.(ytilde).*coeffs_perm))
+        if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,losses[step]) end
         ∂k∂γ = kvals./γ
         ∂k∂η = zeros(Float64,s,n,r,r)
         for j=1:s,i=1:n,k=1:r,l=1:r
             po_kj,po_lj = partial_orders[k,j],partial_orders[l,j]
             kval_jikl = kernel_lattice_s1(x[i,j],x[1,j],po_kj,po_lj,o)
+            if kval_jikl==0 ∂k∂η[j,i,k,l] = 0; continue end 
             denom = po_kj+po_lj == 0 ? 1+η[j]*kval_jikl : η[j]*kval_jikl
             ∂k∂η[j,i,k,l] = kvals[i,k,l]*kval_jikl/denom
         end
         ∂k∂ζ = zeros(Float64,r,n,r,r); for k=1:r ∂k∂ζ[k,1,k,k] = 1 end
-
-        if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,losses[step]) end 
+        θ = [γ,η...,ζ...]
+        ∂k∂θ = zeros(Float64,p,n,r,r); ∂k∂θ[1,:,:,:] = ∂k∂γ; ∂k∂θ[2:s+1,:,:,:] = ∂k∂η; ∂k∂θ[s+2:end,:,:,:] = ∂k∂ζ
+        ∂ktilde∂θ = fft(∂k∂θ,2)
+        ∂L∂θ = real.([sum(map(i->tr(ktilde[i,:,:]\∂ktilde∂θ[j,i,:,:])-coeffs_perm[i,:]'*∂ktilde∂θ[j,i,:,:]*coeffs_perm[i,:],1:n)) for j=1:p])
+        ∂L∂logθ = ∂L∂θ.*θ # since ∂θ∂logθ = θ
+        θ = exp.(log.(θ) - .05 .* ∂L∂logθ) # TODO
+        γ = θ[1]; η = θ[2:1+s]; ζ = θ[2+s:end]
     end
     ktilde = fft([kernel_lattice(x[i,:],x[1,:],o,γ,η,partial_orders[k,:],partial_orders[l,:],s)+ζ[k]*(k==l) for i=1:n,k=1:r,l=1:r],1)
     coeffs = real.(ifft(permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...)),1))
