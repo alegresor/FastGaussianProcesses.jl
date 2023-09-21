@@ -14,6 +14,6 @@ export kernel_lattice,GaussianProcessLatticeSeqB2
 export mean_post,cov_post,var_post
 
 include("plots.jl")
-export plot_gp_optimization
+export plot_gp_optimization,plot_gp_kernel_lattice_1d_lines,plot_gp_kernel_lattice_1d_contour
 
 end
