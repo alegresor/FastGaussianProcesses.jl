@@ -41,16 +41,20 @@ mutable struct GaussianProcessLatticeSeqB2
     ζs::Matrix{Float64}
 end
 
-function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2,RandomShift},o::Int64,γ::Float64,η::Vector{Float64},ζ::Vector{Float64},partial_orders::Matrix{Int64},optim_steps::Int64,verbose::Int64;learningrate::Float64=1e-1,decayrate::Float64=.9)
+function GaussianProcessLatticeSeqB2(f::Function,ls::Union{LatticeSeqB2,RandomShift},n::Int64;partial_orders::Union{Nothing,Matrix{Int64}}=nothing,o::Int64=5,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-16,optim_steps::Int64=100,learningrate::Float64=1e-1,decayrate::Float64=.9,verbose::Int64=10)
     verbosebool = verbose > 0
     @assert log2(n)%1==0
     m = Int64(log2(n))
     x = FirstLinear(ls,m)
     s = size(x,2)
+    if partial_orders===nothing partial_orders = zeros(Int64,1,s) end 
     r = size(partial_orders,1)
-    p = 1+s+r
     @assert size(partial_orders,2)==s
-    y = [f(x[i,:],partial_orders[l,:]) for i=1:n,l=1:r]
+    @assert 2*o in keys(BERNOULLIPOLYS)
+    if typeof(η)==Float64 η = η*ones(Float64,s) else @assert size(η)==(s,) end 
+    if typeof(ζ)==Float64 ζ = ζ*ones(Float64,r) else @assert size(ζ)==(r,) end 
+    p = 1+s+r
+    y = reshape(vcat([f(x[i,:]) for i=1:n]'...),n,r)
     ytilde = fft(y,1)
     losses,γs,ηs,ζs = zeros(Float64,optim_steps+1),zeros(Float64,optim_steps+1),zeros(Float64,optim_steps+1,s),zeros(Float64,optim_steps+1,r)
     if verbosebool println("QGP Optimization Loss") end
@@ -90,6 +94,8 @@ function GaussianProcessLatticeSeqB2(f::Function,n::Int64,ls::Union{LatticeSeqB2
     GaussianProcessLatticeSeqB2(s,f,n,o,γ,η,partial_orders,r,x,y,ytilde,ktilde,coeffs,losses,γs,ηs,ζs)
 end
 
+GaussianProcessLatticeSeqB2(f::Function,s::Int64,n::Int64;kwargs...) = GaussianProcessLatticeSeqB2(f,RandomShift(LatticeSeqB2(s)),n;kwargs...)
+
 function mean_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64},partial_order::Vector{Int64})
     kmat = [kernel_lattice(x,gp.x[i,:],gp.o,gp.γ,gp.η,partial_order,gp.partial_orders[j,:],gp.s) for i=1:gp.n,j=1:gp.r]
     sum(gp.coeffs.*kmat)
@@ -106,4 +112,7 @@ function cov_post(gp::GaussianProcessLatticeSeqB2,x1::Vector{Float64},x2::Vector
     kval-sum(k1vec.*coeffs)
 end
 
-var_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64},partial_order::Vector{Int64}) = cov_post(gp,x,x,partial_order,partial_order)
+function var_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64},partial_order::Vector{Int64})
+    var = cov_post(gp,x,x,partial_order,partial_order)
+    -1e-12<var<0 ? 0. : var
+end
