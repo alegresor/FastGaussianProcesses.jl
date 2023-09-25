@@ -78,6 +78,7 @@ function plot_gp_optimization(gp::GaussianProcessLatticeSeqB2;backgroundcolor::S
 end
 
 function plot_gp_1s(gp::GaussianProcessLatticeSeqB2;f::Union{Nothing,Function}=nothing,partial_order::Vector{Int64}=[0],uncertainty::Float64=.05,xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=257,linewidth::Float64=3.,markersize::Float64=15.,backgroundcolor::Symbol=:white)
+    @assert gp.s==1 
     n = length(partial_order)
     fig = CairoMakie.Figure(resolution=(800,n*500),backgroundcolor=backgroundcolor)
     xticks = Vector(xmin:(xmax-xmin)/(nxticks-1):xmax)
@@ -89,7 +90,7 @@ function plot_gp_1s(gp::GaussianProcessLatticeSeqB2;f::Union{Nothing,Function}=n
         po = partial_order[i]
         idx = findfirst(x->x==po,gp.partial_orders[:,1])
         if (f!==nothing)&&(idx!==nothing) CairoMakie.lines!(ax,xticks,yticks[:,idx],color=JULIA4LOGOCOLORS[2],linewidth=linewidth,label=latexstring("\$f^{($po)}(x)\$")) end 
-        if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.y[:,idx],markersize=markersize,color=JULIA4LOGOCOLORS[4],label=latexstring("\$(y^{($po)}_i)_{i=1}^{$(gp.n)}\$")) end 
+        if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po)}_i)_{i=1}^{$(gp.n)}\$")) end 
         yhatticks = map(xtick->gp([xtick],[po]),xticks)
         stdhatticks = sqrt.(map(xtick->var_post(gp,[xtick],[po]),xticks))
         ci_low,ci_high = yhatticks.-beta*stdhatticks,yhatticks.+beta*stdhatticks
@@ -98,4 +99,34 @@ function plot_gp_1s(gp::GaussianProcessLatticeSeqB2;f::Union{Nothing,Function}=n
         CairoMakie.Legend(fig[2*i-1,1],ax,orientation=:horizontal,framevisible=false) 
     end 
     fig 
+end
+
+function plot_gp_2s(gp::GaussianProcessLatticeSeqB2;f::Union{Nothing,Function}=nothing,partial_order::Matrix{Int64}=[0 0;],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=65,markersize::Float64=15.,backgroundcolor::Symbol=:white)
+    @assert gp.s==2
+    n = size(partial_order,1)
+    cols = f===nothing ? 1 : 2
+    fig = CairoMakie.Figure(resolution=(cols*2*400,n*300),backgroundcolor=backgroundcolor)
+    xticks = Vector(xmin:(xmax-xmin)/(nxticks-1):xmax)
+    if f!==nothing yticks = reshape([vcat(f([xticks[i],xticks[j]])) for i=1:nxticks,j=1:nxticks],nxticks,nxticks) end 
+    for i=1:n
+        po = partial_order[i,:]; po1,po2 = po[1],po[2]
+        idx = findfirst(x->x==1,all(gp.partial_orders.==reshape(po,1,2),dims=2))
+        if (f!==nothing)&&(idx!==nothing)
+            ymesh = [yticks[i,j][idx] for i=1:nxticks,j=1:nxticks]
+            ax = CairoMakie.Axis(fig[i,1],xlabel=L"$x_1$",ylabel=L"$x_2$",aspect=1,title=latexstring("\$f^{($po1,$po2)}(x)\$")); CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax)
+            CairoMakie.heatmap!(ax,xticks,xticks,ymesh,colormap=:julia_colorscheme) 
+            CairoMakie.scatter!(ax,gp.x[:,1],gp.x[:,2],markersize=markersize,color=:black,label=latexstring("\$(y^{($po1,$po2)}_i)_{i=1}^{$(gp.n)}\$")) 
+            ax = CairoMakie.Axis3(fig[i,2],xlabel=L"$x_1$",ylabel=L"$x_2$",zlabel="",title=latexstring("\$f^{($po1,$po2)}(x)\$")); CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax)
+            CairoMakie.surface!(ax,xticks,xticks,ymesh,colormap=:julia_colorscheme) 
+            CairoMakie.scatter!(ax,gp.x[:,1],gp.x[:,2],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po1,$po2)}_i)_{i=1}^{$(gp.n)}\$")) 
+        end 
+        yhatticks = [gp([xticks[i],xticks[j]],po) for i=1:nxticks,j=1:nxticks]
+        ax = CairoMakie.Axis3(fig[i,f===nothing ? 1 : 3],xlabel=L"$x_1$",ylabel=L"$x_2$",zlabel="",title=latexstring("\$m_n^{($po1,$po2)}(x)\$")); CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax)
+        CairoMakie.surface!(ax,xticks,xticks,yhatticks,colormap=:julia_colorscheme)
+        if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.x[:,2],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po1,$po2)}_i)_{i=1}^{$(gp.n)}\$")) end 
+        ax = CairoMakie.Axis(fig[i,f===nothing ? 2 : 4],xlabel=L"$x_1$",ylabel=L"$x_2$",aspect=1,title=latexstring("\$m_n^{($po1,$po2)}(x)\$")); CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax)
+        CairoMakie.heatmap!(ax,xticks,xticks,yhatticks,colormap=:julia_colorscheme)
+        if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.x[:,2],markersize=markersize,color=:black,label=latexstring("\$(y^{($po1,$po2)}_i)_{i=1}^{$(gp.n)}\$")) end 
+    end
+    fig
 end 
