@@ -82,20 +82,20 @@ function plot_gp_1s(gp::GaussianProcessLatticeSeqB2;f::Union{Nothing,Function}=n
     n = length(partial_order)
     fig = CairoMakie.Figure(resolution=(800,n*500),backgroundcolor=backgroundcolor)
     xticks = Vector(xmin:(xmax-xmin)/(nxticks-1):xmax)
-    beta = quantile(Normal(),1-uncertainty/2)
+    q = quantile(Normal(),1-uncertainty/2)
     if f!==nothing yticks = reshape(vcat([f([xticks[i]]) for i=1:nxticks]'...),nxticks,gp.r) end 
     for i=1:n
         ax = CairoMakie.Axis(fig[2*i,1],xlabel=L"$x$")
         CairoMakie.xlims!(ax,xmin,xmax)
         po = partial_order[i]
-        idx = findfirst(x->x==po,gp.partial_orders[:,1])
+        idx = findfirst(x->x==po,gp.β[:,1])
         if (f!==nothing)&&(idx!==nothing) CairoMakie.lines!(ax,xticks,yticks[:,idx],color=JULIA4LOGOCOLORS[2],linewidth=linewidth,label=latexstring("\$f^{($po)}(x)\$")) end 
         if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po)}_i)_{i=1}^{$(gp.n)}\$")) end 
         yhatticks = map(xtick->gp([xtick],[po]),xticks)
         stdhatticks = sqrt.(map(xtick->var_post(gp,[xtick],[po]),xticks))
-        ci_low,ci_high = yhatticks.-beta*stdhatticks,yhatticks.+beta*stdhatticks
+        ci_low,ci_high = yhatticks.-q*stdhatticks,yhatticks.+q*stdhatticks
         CairoMakie.lines!(ax,xticks,yhatticks,color=JULIA4LOGOCOLORS[1],linewidth=linewidth,label=latexstring("\$m_n^{($po)}(x)\$"))
-        CairoMakie.band!(ax,xticks,ci_low,ci_high,color=(JULIA4LOGOCOLORS[1],.25),label=latexstring("\$m_n^{($po)}(x) \\pm $(round(beta,digits=2)) \\; \\sigma_n^{($pi)}(x)\$"))
+        CairoMakie.band!(ax,xticks,ci_low,ci_high,color=(JULIA4LOGOCOLORS[1],.25),label=latexstring("\$m_n^{($po)}(x) \\pm $(round(q,digits=2)) \\; \\sigma_n^{($pi)}(x)\$"))
         CairoMakie.Legend(fig[2*i-1,1],ax,orientation=:horizontal,framevisible=false) 
     end 
     fig 
@@ -110,7 +110,7 @@ function plot_gp_2s(gp::GaussianProcessLatticeSeqB2;f::Union{Nothing,Function}=n
     if f!==nothing yticks = reshape([vcat(f([xticks[i],xticks[j]])) for i=1:nxticks,j=1:nxticks],nxticks,nxticks) end 
     for i=1:n
         po = partial_order[i,:]; po1,po2 = po[1],po[2]
-        idx = findfirst(x->x==1,all(gp.partial_orders.==reshape(po,1,2),dims=2))
+        idx = findfirst(x->x==1,all(gp.β.==reshape(po,1,2),dims=2))
         if (f!==nothing)&&(idx!==nothing)
             ymesh = [yticks[i,j][idx] for i=1:nxticks,j=1:nxticks]
             ax = CairoMakie.Axis(fig[i,1],xlabel=L"$x_1$",ylabel=L"$x_2$",aspect=1,title=latexstring("\$f^{($po1,$po2)}(x)\$")); CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax)
