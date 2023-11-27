@@ -11,13 +11,13 @@ BERNOULLIPOLYS = Dict(
     9 =>  x -> x^9-9/2*x^8+6*x^7-21/5*x^5+2*x^3-3/10*x,
     10 => x -> x^10-5*x^9+15/2*x^8-7*x^6+5*x^4-3/2*x^2+5/66)
 
-function kernel_lattice_s1(x1::Float64,x2::Float64,β1::Int64,β2::Int64,α::Int64)
+function kernel_shiftinvar_s1(x1::Float64,x2::Float64,β1::Int64,β2::Int64,α::Int64)
     bpolyidx = 2*α-β1-β2
     (-1)^(α+1+β2)*prod((bpolyidx+1):(2*α))*BERNOULLIPOLYS[bpolyidx](mod(x1-x2,1))
 end 
 
-function kernel_lattice(x1::Vector{Float64},x2::Vector{Float64},α::Int64,γ::Float64,η::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},s::Int64)
-    kvals = map(j->kernel_lattice_s1(x1[j],x2[j],β1[j],β2[j],α),1:s)
+function kernel_shiftinvar(x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},α::Int64,γ::Float64,η::Vector{Float64},s::Int64)
+    kvals = map(j->kernel_shiftinvar_s1(x1[j],x2[j],β1[j],β2[j],α),1:s)
     γ*prod(map(j->β1[j]+β2[j] == 0 ? 1+η[j]*kvals[j] : η[j]*kvals[j],1:s))
 end
 
@@ -61,7 +61,7 @@ function GaussianProcessLatticeSeqB2(f::Function,ls::Union{LatticeSeqB2,RandomSh
     Δ = zeros(Float64,p)
     for step=1:optim_steps
         γs[step] = γ; ηs[step,:] = η; ζs[step,:] = ζ
-        kvals = [kernel_lattice(x[i,:],x[1,:],α,γ,η,β[k,:],β[l,:],s) for i=1:n,k=1:r,l=1:r]
+        kvals = [kernel_shiftinvar(x[i,:],x[1,:],β[k,:],β[l,:],α,γ,η,s) for i=1:n,k=1:r,l=1:r]
         kvalsnoisy = copy(kvals); for k=1:r kvalsnoisy[1,k,k] = kvalsnoisy[1,k,k]+ζ[k] end
         ktilde = fft(kvalsnoisy,1)
         coeffs_perm = permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...))
@@ -71,7 +71,7 @@ function GaussianProcessLatticeSeqB2(f::Function,ls::Union{LatticeSeqB2,RandomSh
         ∂k∂η = zeros(Float64,s,n,r,r)
         for j=1:s,i=1:n,k=1:r,l=1:r
             po_kj,po_lj = β[k,j],β[l,j]
-            kval_jikl = kernel_lattice_s1(x[i,j],x[1,j],po_kj,po_lj,α)
+            kval_jikl = kernel_shiftinvar_s1(x[i,j],x[1,j],po_kj,po_lj,α)
             if kval_jikl==0 ∂k∂η[j,i,k,l] = 0; continue end 
             denom = po_kj+po_lj == 0 ? 1+η[j]*kval_jikl : η[j]*kval_jikl
             ∂k∂η[j,i,k,l] = kvals[i,k,l]*kval_jikl/denom
@@ -86,7 +86,7 @@ function GaussianProcessLatticeSeqB2(f::Function,ls::Union{LatticeSeqB2,RandomSh
         θ = exp.(log.(θ)-learningrate*Δ.^(-1/2).*∂L∂logθ)
         γ = θ[1]; η = θ[2:1+s]; ζ = θ[2+s:end]
     end
-    ktilde = fft([kernel_lattice(x[i,:],x[1,:],α,γ,η,β[k,:],β[l,:],s)+ζ[k]*(k==l)*(i==1) for i=1:n,k=1:r,l=1:r],1)
+    ktilde = fft([kernel_shiftinvar(x[i,:],x[1,:],β[k,:],β[l,:],α,γ,η,s)+ζ[k]*(k==l)*(i==1) for i=1:n,k=1:r,l=1:r],1)
     coeffs_perm = permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...))
     losses[end] = real.(sum(map(i->logdet(ktilde[i,:,:]),1:n))+sum(conj.(ytilde).*coeffs_perm))
     γs[end] = γ; ηs[end,:] = η; ζs[end,:] = ζ
@@ -97,16 +97,16 @@ end
 GaussianProcessLatticeSeqB2(f::Function,s::Int64,n::Int64;kwargs...) = GaussianProcessLatticeSeqB2(f,RandomShift(LatticeSeqB2(s)),n;kwargs...)
 
 function mean_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64},β::Vector{Int64})
-    kmat = [kernel_lattice(x,gp.x[i,:],gp.α,gp.γ,gp.η,β,gp.β[j,:],gp.s) for i=1:gp.n,j=1:gp.r]
+    kmat = [kernel_shiftinvar(x,gp.x[i,:],β,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s) for i=1:gp.n,j=1:gp.r]
     sum(gp.coeffs.*kmat)
 end 
 
 (gp::GaussianProcessLatticeSeqB2)(x::Vector{Float64},β::Vector{Int64}) = mean_post(gp,x,β)
 
 function cov_post(gp::GaussianProcessLatticeSeqB2,x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64})
-    kval = kernel_lattice(x1,x2,gp.α,gp.γ,gp.η,β1,β2,gp.s)
-    k1vec = [kernel_lattice(x1,gp.x[i,:],gp.α,gp.γ,gp.η,β1,gp.β[j,:],gp.s) for i=1:gp.n,j=1:gp.r]
-    k2vec = [kernel_lattice(x2,gp.x[i,:],gp.α,gp.γ,gp.η,β2,gp.β[j,:],gp.s) for i=1:gp.n,j=1:gp.r]
+    kval = kernel_shiftinvar(x1,x2,β1,β2,gp.α,gp.γ,gp.η,gp.s)
+    k1vec = [kernel_shiftinvar(x1,gp.x[i,:],β1,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s) for i=1:gp.n,j=1:gp.r]
+    k2vec = [kernel_shiftinvar(x2,gp.x[i,:],β2,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s) for i=1:gp.n,j=1:gp.r]
     k2vectilde = fft(k2vec,1)
     coeffs = real.(ifft(permutedims(hcat(map(i->gp.ktilde[i,:,:]\k2vectilde[i,:],1:gp.n)...)),1))
     kval-sum(k1vec.*coeffs)
