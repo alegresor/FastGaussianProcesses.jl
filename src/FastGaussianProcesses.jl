@@ -21,6 +21,6 @@ export kernel_digshiftinvar
 export mean_post,cov_post,var_post
 
 include("plots.jl")
-export plot_gp_kernel_latticeseqb2_1s_lines,plot_gp_kernel_digitalseqb2g_1s_lines,plot_gp_kernel_shiftinvar_1s_contour,plot_gp_optimization,plot_gp_1s,plot_gp_2s
+export plot_gp_kernel_latticeseqb2_1s_lines,plot_gp_kernel_digitalseqb2g_1s_lines,plot_gp_kernel_latticeseqb2_1s_contsurfs,plot_gp_kernel_digitalseqb2g_1s_contsurfs,plot_gp_optimization,plot_gp_1s,plot_gp_2s
 
 end

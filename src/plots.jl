@@ -17,19 +17,19 @@ end
 plot_gp_kernel_latticeseqb2_1s_lines(;x2::Vector{Float64}=[0.,0.,0.,0.],β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],α::Vector{Int64}=[2,2,2,2],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=1024,linewidth::Float64=3.,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_lines(kernel_shiftinvar,x2,β1,β2,α,γ,η,xmin,xmax,nxticks,linewidth,backgroundcolor)
 plot_gp_kernel_digitalseqb2g_1s_lines(;x2::Vector{Float64}=[0.,0.,0.],β1::Vector{Int64}=[0,1,1],β2::Vector{Int64}=[0,0,1],α::Vector{Int64}=[4,4,4],γ::Vector{Float64}=[1.,1.,1.],η::Vector{Float64}=[1.,1.,1.],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,linewidth::Float64=3.,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_lines(kernel_digshiftinvar,x2,β1,β2,α,γ,η,xmin,xmax,nxticks,linewidth,backgroundcolor)
 
-function plot_gp_kernel_shiftinvar_1s_contour(;β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],α::Vector{Int64}=[2,2,2,2],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=129,backgroundcolor::Symbol=:white)
+function plot_gp_kernel_1s_contsurfs(kernel_func::Function,β1::Vector{Int64},β2::Vector{Int64},α::Vector{Int64},γ::Vector{Float64},η::Vector{Float64},xmin::Float64,xmax::Float64,nxticks::Int64,backgroundcolor::Symbol)
     n = length(α)
     fig = CairoMakie.Figure(resolution=(800,310*n),backgroundcolor=backgroundcolor)
-    x1ticks = Vector(xmin:(xmax-xmin)/(nxticks-1):xmax)
+    x1ticks = Vector(xmin:(xmax-xmin)/nxticks:xmax)[1:end-1]
     x2ticks = copy(x1ticks)
-    karr = [kernel_shiftinvar([x1ticks[i]],[x2ticks[j]],[β1[k]],[β2[k]],α[k],γ[k],[η[k]],1) for k=1:n,i=1:nxticks,j=1:nxticks]
+    karr = [kernel_func([x1ticks[i]],[x2ticks[j]],[β1[k]],[β2[k]],α[k],γ[k],[η[k]],1) for k=1:n,i=1:nxticks,j=1:nxticks]
     for k=1:n 
         kmin,kmax = minimum(karr[k,:,:]),maximum(karr[k,:,:])
         ax = CairoMakie.Axis3(fig[k,1],
             xlabel = L"$x_1$",
             ylabel = L"$x_2$",
-            zlabel = L"$k^{(\alpha,\beta)}(x_1,\; x_2 \; |  \; \alpha, \; \gamma, \; \eta)",
-            title = latexstring("\$\\alpha = $(β1[k]), \\; \\beta = $(β2[k]), \\; \alpha = $(α[k]), \\; \\gamma = $(γ[k]), \\; \\eta = $(η[k])\$"),
+            zlabel = L"$K^{(\beta_1,\beta_2)}(x_1,\; x_2 \; |  \; \alpha, \; \gamma, \; \eta)",
+            title = latexstring("\$\\beta_1 = $(β1[k]), \\; \\beta_2 = $(β2[k]), \\; \\alpha = $(α[k]), \\; \\gamma = $(γ[k]), \\; \\eta = $(η[k])\$"),
             backgroundcolor = backgroundcolor)
         CairoMakie.surface!(ax,x1ticks,x2ticks,karr[k,:,:],colormap=:julia_colorscheme,colorrange=(kmin,kmax))
         CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax); CairoMakie.zlims!(kmin,kmax)
@@ -43,6 +43,8 @@ function plot_gp_kernel_shiftinvar_1s_contour(;β1::Vector{Int64}=[0,1,0,1],β2:
     end 
     fig
 end
+plot_gp_kernel_latticeseqb2_1s_contsurfs(;β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],α::Vector{Int64}=[2,2,2,2],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=128,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_contsurfs(kernel_shiftinvar,β1,β2,α,γ,η,xmin,xmax,nxticks,backgroundcolor)
+plot_gp_kernel_digitalseqb2g_1s_contsurfs(;β1::Vector{Int64}=[0,1,1],β2::Vector{Int64}=[0,0,1],α::Vector{Int64}=[4,4,4],γ::Vector{Float64}=[1.,1.,1.],η::Vector{Float64}=[1.,1.,1.],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=128,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_contsurfs(kernel_digshiftinvar,β1,β2,α,γ,η,xmin,xmax,nxticks,backgroundcolor)
 
 function plot_gp_optimization(gp::GaussianProcessLatticeSeqB2;backgroundcolor::Symbol=:white)
     noptsp1 = length(gp.losses)
