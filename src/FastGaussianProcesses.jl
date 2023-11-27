@@ -12,6 +12,9 @@ import Distributions: quantile,Normal
 include("gp.latticeseqb2.jl")
 export kernel_lattice,GaussianProcessLatticeSeqB2
 
+include("gp.digitalseqb2g.jl")
+export kernel_digital
+
 export mean_post,cov_post,var_post
 
 include("plots.jl")
