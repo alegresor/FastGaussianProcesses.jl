@@ -23,7 +23,6 @@ end
 
 mutable struct GaussianProcessLatticeSeqB2
     s::Int64
-    f::Function 
     n::Int64
     α::Int64
     γ::Float64
@@ -91,9 +90,8 @@ function GaussianProcessLatticeSeqB2(f::Function,ls::Union{LatticeSeqB2,RandomSh
     losses[end] = real.(sum(map(i->logdet(ktilde[i,:,:]),1:n))+sum(conj.(ytilde).*coeffs_perm))
     γs[end] = γ; ηs[end,:] = η; ζs[end,:] = ζ
     coeffs = real.(ifft(coeffs_perm,1))
-    GaussianProcessLatticeSeqB2(s,f,n,α,γ,η,β,r,x,y,ytilde,ktilde,coeffs,losses,γs,ηs,ζs)
+    GaussianProcessLatticeSeqB2(s,n,α,γ,η,β,r,x,y,ytilde,ktilde,coeffs,losses,γs,ηs,ζs)
 end
-
 GaussianProcessLatticeSeqB2(f::Function,s::Int64,n::Int64;kwargs...) = GaussianProcessLatticeSeqB2(f,RandomShift(LatticeSeqB2(s)),n;kwargs...)
 
 function mean_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64},β::Vector{Int64})

@@ -16,7 +16,7 @@ include("gp.latticeseqb2.jl")
 export kernel_shiftinvar,GaussianProcessLatticeSeqB2
 
 include("gp.digitalseqb2g.jl")
-export kernel_digshiftinvar
+export kernel_digshiftinvar,GaussianProcessDigitalSeqB2G
 
 export mean_post,cov_post,var_post
 
