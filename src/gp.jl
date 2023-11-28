@@ -91,20 +91,24 @@ function _train(gp::FastGaussianProcess,verbose::Int64)
     gp
 end
 
+function _multidim_kernel(gp::FastGaussianProcess,x1::Union{Vector{Float64},Vector{UInt64}},x2::Union{Vector{Float64},Vector{UInt64}},β1::Vector{Int64},β2::Vector{Int64})
+    kvals = map(j->gp.kernel_1s(x1[j],x2[j],β1[j],β2[j],gp.α),1:gp.s)
+    gp.γ*prod(map(j->β1[j]+β2[j] == 0 ? 1+gp.η[j]*kvals[j] : gp.η[j]*kvals[j],1:gp.s))
+end 
+
 function mean_post(gp::FastGaussianProcess,x::Union{Vector{Float64},Vector{UInt64}},β::Vector{Int64})
-    kvals_sep = [gp.kernel_1s(x[j],gp._x[i,j],β[j],gp.β[k,j],gp.α) for i=1:gp.n,k=1:gp.n_β,j=1:gp.s]
-    kmat = gp.γ.*[prod(map(j->β[j]+gp.β[k,j] == 0 ? 1+gp.η[j]*kvals_sep[i,k,j] : gp.η[j]*kvals_sep[i,k,j],1:gp.s))  for i=1:gp.n,k=1:gp.n_β]
+    kmat = [_multidim_kernel(gp,x,gp._x[i,:],β,gp.β[k,:]) for i=1:gp.n,k=1:gp.n_β] 
     sum(gp.coeffs.*kmat)
 end 
 (gp::FastGaussianProcess)(x::Union{Vector{Float64},Vector{UInt64}},β::Vector{Int64}) = mean_post(gp,x,β)
 
 function cov_post(gp::FastGaussianProcess,x1::Union{Vector{Float64},Vector{UInt64}},x2::Union{Vector{Float64},Vector{UInt64}},β1::Vector{Int64},β2::Vector{Int64})
-    kval = kernel_shiftinvar(x1,x2,β1,β2,gp.α,gp.γ,gp.η,gp.s)
-    k1vec = [kernel_shiftinvar(x1,gp._x[i,:],β1,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s) for i=1:gp.n,j=1:gp.n_β]
-    k2vec = [kernel_shiftinvar(x2,gp._x[i,:],β2,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s) for i=1:gp.n,j=1:gp.n_β]
-    k2vectilde = fft(k2vec,1)
-    coeffs = real.(ifft(permutedims(hcat(map(i->gp.λ[i,:,:]\k2vectilde[i,:],1:gp.n)...)),1))
-    kval-sum(k1vec.*coeffs)
+    kval = _multidim_kernel(gp,x1,x2,β1,β2)
+    k1vec = [_multidim_kernel(gp,x1,gp._x[i,:],β1,gp.β[k,:]) for i=1:gp.n,k=1:gp.n_β] 
+    k2vec = [_multidim_kernel(gp,x2,gp._x[i,:],β2,gp.β[k,:]) for i=1:gp.n,k=1:gp.n_β] 
+    k2vectilde = conj.(gp.ft(k2vec,1))
+    coeffs = real.(gp.ft(permutedims(hcat(map(i->(gp.λ[i,:,:]./sqrt(gp.n))\k2vectilde[i,:],1:gp.n)...)),1))
+    kval-sum(k1vec'*coeffs)
 end
 
 function var_post(gp::FastGaussianProcess,x::Vector{Float64},β::Vector{Int64})
