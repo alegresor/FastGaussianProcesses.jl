@@ -74,7 +74,7 @@ function plot_gp_optimization(gp::Union{GaussianProcessLatticeSeqB2,GaussianProc
         ylabel = L"$\zeta$",
         yscale = log10,
         backgroundcolor = backgroundcolor)
-    for l=1:gp.r CairoMakie.lines!(axζ,xrange,gp.ζs[:,l],color=(JULIA4LOGOCOLORS[4],(gp.r-l+1)/gp.r),linewidth=3) end 
+    for l=1:gp.n_β CairoMakie.lines!(axζ,xrange,gp.ζs[:,l],color=(JULIA4LOGOCOLORS[4],(gp.n_β-l+1)/gp.n_β),linewidth=3) end 
     CairoMakie.xlims!(axζ,0,noptsp1-1)
     CairoMakie.linkxaxes!(axloss,axη)
     CairoMakie.linkxaxes!(axγ,axζ)
@@ -87,7 +87,7 @@ function plot_gp_1s(gp::Union{GaussianProcessLatticeSeqB2,GaussianProcessDigital
     fig = CairoMakie.Figure(resolution=(800,n*500),backgroundcolor=backgroundcolor)
     xticks = Vector(xmin:(xmax-xmin)/nxticks:xmax)[1:end-1]
     q = quantile(Normal(),1-uncertainty/2)
-    if f!==nothing yticks = reshape(vcat([f([xticks[i]]) for i=1:nxticks]'...),nxticks,gp.r) end 
+    if f!==nothing yticks = reshape(vcat([f([xticks[i]]) for i=1:nxticks]'...),nxticks,gp.n_β) end 
     for i=1:n
         ax = CairoMakie.Axis(fig[2*i,1],xlabel=L"$x$")
         CairoMakie.xlims!(ax,xmin,xmax)
@@ -105,7 +105,7 @@ function plot_gp_1s(gp::Union{GaussianProcessLatticeSeqB2,GaussianProcessDigital
     fig 
 end
 
-function plot_gp_2s(gp::Union{GaussianProcessLatticeSeqB2,GaussianProcessDigitalSeqB2G};f::Union{Nothing,Function}=nothing,β::Matrix{Int64}=[0 0;],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=32,markersize::Float64=16.,backgroundcolor::Symbol=:white)
+function plot_gp_2s(gp::Union{GaussianProcessLatticeSeqB2,GaussianProcessDigitalSeqB2G};f::Union{Nothing,Function}=nothing,β::Matrix{Int64}=[0 0;],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=32,markersize::Float64=16.,backgroundcolor::Symbol=:white)
     @assert gp.s==2
     n = size(β,1)
     cols = f===nothing ? 1 : 2
