@@ -18,14 +18,8 @@ function kernel_digshiftinvar_s1(x1b::UInt64,x2b::UInt64,β1::Int64,β2::Int64,�
     ktildeidx = α-β1-β2
     (-2)^(β1+β2)*KTILDE[ktildeidx](β,x,_x,t)
 end 
-
-function kernel_digshiftinvar(x1b::Vector{UInt64},x2b::Vector{UInt64},β1::Vector{Int64},β2::Vector{Int64},α::Int64,γ::Float64,η::Vector{Float64},s::Int64,t::Int64)
-    kvals = map(j->kernel_digshiftinvar_s1(x1b[j],x2b[j],β1[j],β2[j],α,t),1:s)
-    γ*prod(map(j->β1[j]+β2[j] == 0 ? 1+η[j]*kvals[j] : η[j]*kvals[j],1:s))
-end
-kernel_digshiftinvar(x1b::Vector{UInt64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},α::Int64,γ::Float64,η::Vector{Float64},s::Int64,t::Int64) = kernel_digshiftinvar(x1b,Float64ToBinary.(x2,t),β1,β2,α,γ,η,s,t)
-kernel_digshiftinvar(x1::Vector{Float64},x2b::Vector{UInt64},β1::Vector{Int64},β2::Vector{Int64},α::Int64,γ::Float64,η::Vector{Float64},s::Int64,t::Int64) = kernel_digshiftinvar(Float64ToBinary.(x1,t),x2b,β1,β2,α,γ,η,s,t)
-kernel_digshiftinvar(x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},α::Int64,γ::Float64,η::Vector{Float64},s::Int64,t::Int64) = kernel_digshiftinvar(Float64ToBinary.(x1,t),Float64ToBinary.(x2,t),β1,β2,α,γ,η,s,t)
-kernel_digshiftinvar(x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},α::Int64,γ::Float64,η::Vector{Float64},s::Int64) = kernel_digshiftinvar(x1,x2,β1,β2,α,γ,η,s,53)
+kernel_digshiftinvar_s1(x1b::UInt64,x2::Float64,β1::Int64,β2::Int64,α::Int64,t::Int64) = kernel_digshiftinvar_s1(x1b,Float64ToBinary(x2,t),β1,β2,α,t)
+kernel_digshiftinvar_s1(x1::Float64,x2b::UInt64,β1::Int64,β2::Int64,α::Int64,t::Int64) = kernel_digshiftinvar_s1(Float64ToBinary(x1,t),x2b,β1,β2,α,t)
+kernel_digshiftinvar_s1(x1::Float64,x2::Float64,β1::Int64,β2::Int64,α::Int64,t::Int64) = kernel_digshiftinvar_s1(Float64ToBinary(x1,t),Float64ToBinary(x2,t),β1,β2,α,t)
 
 GaussianProcessDigitalSeqB2G(f::Function,s::Int64,n::Int64;kwargs...) = FastGaussianProcess(f,RandomDigitalShift(DigitalSeqB2G(s)),n;kwargs...)

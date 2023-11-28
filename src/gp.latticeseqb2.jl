@@ -16,9 +16,4 @@ function kernel_shiftinvar_s1(x1::Float64,x2::Float64,β1::Int64,β2::Int64,α::
     (-1)^(α+1+β2)*prod((bpolyidx+1):(2*α))*BERNOULLIPOLYS[bpolyidx](mod(x1-x2,1))
 end 
 
-function kernel_shiftinvar(x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},α::Int64,γ::Float64,η::Vector{Float64},s::Int64)
-    kvals = map(j->kernel_shiftinvar_s1(x1[j],x2[j],β1[j],β2[j],α),1:s)
-    γ*prod(map(j->β1[j]+β2[j] == 0 ? 1+η[j]*kvals[j] : η[j]*kvals[j],1:s))
-end
-
 GaussianProcessLatticeSeqB2(f::Function,s::Int64,n::Int64;kwargs...) = FastGaussianProcess(f,RandomShift(LatticeSeqB2(s)),n;kwargs...)
