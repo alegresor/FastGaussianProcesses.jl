@@ -96,7 +96,7 @@ function GaussianProcessDigitalSeqB2G(f::Function,ds::Union{DigitalSeqB2G,Random
         θ = exp.(log.(θ)-learningrate*Δ.^(-1/2).*∂L∂logθ)
         γ = θ[1]; η = θ[2:1+s]; ζ = θ[2+s:end]
     end
-    ktilde = n.*fwht_natural([kernel_digshiftinvar(xb[i,:],xb[1,:],β[k,:],β[l,:],α,γ,η,s,t)+ζ[k]*(k==l)*(i==1) for i=1:n,k=1:r,l=1:r],1)
+    ktilde = sqrt(n).*fwht_natural([kernel_digshiftinvar(xb[i,:],xb[1,:],β[k,:],β[l,:],α,γ,η,s,t)+ζ[k]*(k==l)*(i==1) for i=1:n,k=1:r,l=1:r],1)
     coeffs_perm = permutedims(hcat(map(i->ktilde[i,:,:]\ytilde[i,:],1:n)...))
     losses[end] = sum(map(i->logdet(ktilde[i,:,:]),1:n))+sum(conj.(ytilde).*coeffs_perm)
     γs[end] = γ; ηs[end,:] = η; ζs[end,:] = ζ
@@ -109,14 +109,13 @@ function mean_post(gp::GaussianProcessDigitalSeqB2G,x::Union{Vector{UInt64},Vect
     kmat = [kernel_digshiftinvar(x,gp.xb[i,:],β,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s,gp.t) for i=1:gp.n,j=1:gp.r]
     sum(gp.coeffs.*kmat)
 end 
-
 (gp::GaussianProcessDigitalSeqB2G)(x::Union{Vector{UInt64},Vector{Float64}},β::Vector{Int64}) = mean_post(gp,x,β)
 
 function cov_post(gp::GaussianProcessDigitalSeqB2G,x1::Union{Vector{UInt64},Vector{Float64}},x2::Union{Vector{UInt64},Vector{Float64}},β1::Vector{Int64},β2::Vector{Int64})
     kval = kernel_digshiftinvar(x1,x2,β1,β2,gp.α,gp.γ,gp.η,gp.s,gp.t)
     k1vec = [kernel_digshiftinvar(x1,gp.x[i,:],β1,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s,gp.t) for i=1:gp.n,j=1:gp.r]
     k2vec = [kernel_digshiftinvar(x2,gp.x[i,:],β2,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s,gp.t) for i=1:gp.n,j=1:gp.r]
-    k2vectilde = fwht_natural(k2vec,1)
+    k2vectilde = sqrt(gp.n)*fwht_natural(k2vec,1)
     coeffs = ifwht_natural(permutedims(hcat(map(i->gp.ktilde[i,:,:]\k2vectilde[i,:],1:gp.n)...)),1)/gp.n
     kval-sum(k1vec.*coeffs)
 end

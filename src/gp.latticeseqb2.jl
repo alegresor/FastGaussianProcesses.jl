@@ -98,7 +98,6 @@ function mean_post(gp::GaussianProcessLatticeSeqB2,x::Vector{Float64},β::Vector
     kmat = [kernel_shiftinvar(x,gp.x[i,:],β,gp.β[j,:],gp.α,gp.γ,gp.η,gp.s) for i=1:gp.n,j=1:gp.r]
     sum(gp.coeffs.*kmat)
 end 
-
 (gp::GaussianProcessLatticeSeqB2)(x::Vector{Float64},β::Vector{Int64}) = mean_post(gp,x,β)
 
 function cov_post(gp::GaussianProcessLatticeSeqB2,x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64})
