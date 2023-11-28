@@ -46,7 +46,7 @@ end
 plot_gp_kernel_latticeseqb2_1s_contsurfs(;β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],α::Vector{Int64}=[2,2,2,2],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=128,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_contsurfs(kernel_shiftinvar,β1,β2,α,γ,η,xmin,xmax,nxticks,backgroundcolor)
 plot_gp_kernel_digitalseqb2g_1s_contsurfs(;β1::Vector{Int64}=[0,1,1],β2::Vector{Int64}=[0,0,1],α::Vector{Int64}=[4,4,4],γ::Vector{Float64}=[1.,1.,1.],η::Vector{Float64}=[1.,1.,1.],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=128,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_contsurfs(kernel_digshiftinvar,β1,β2,α,γ,η,xmin,xmax,nxticks,backgroundcolor)
 
-function plot_gp_optimization(gp::Union{GaussianProcessLatticeSeqB2,GaussianProcessDigitalSeqB2G};backgroundcolor::Symbol=:white)
+function plot_gp_optimization(gp::FastGaussianProcess;backgroundcolor::Symbol=:white)
     noptsp1 = length(gp.losses)
     @assert noptsp1>1
     xrange = [k for k=0:noptsp1-1]
@@ -81,7 +81,7 @@ function plot_gp_optimization(gp::Union{GaussianProcessLatticeSeqB2,GaussianProc
     return fig
 end
 
-function plot_gp_1s(gp::Union{GaussianProcessLatticeSeqB2,GaussianProcessDigitalSeqB2G};f::Union{Nothing,Function}=nothing,β::Vector{Int64}=[0],uncertainty::Float64=.05,xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,markersize::Float64=16.,backgroundcolor::Symbol=:white)
+function plot_gp_1s(gp::FastGaussianProcess;f::Union{Nothing,Function}=nothing,β::Vector{Int64}=[0],uncertainty::Float64=.05,xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,markersize::Float64=16.,backgroundcolor::Symbol=:white)
     @assert gp.s==1 
     n = length(β)
     fig = CairoMakie.Figure(resolution=(800,n*500),backgroundcolor=backgroundcolor)
@@ -105,7 +105,7 @@ function plot_gp_1s(gp::Union{GaussianProcessLatticeSeqB2,GaussianProcessDigital
     fig 
 end
 
-function plot_gp_2s(gp::Union{GaussianProcessLatticeSeqB2,GaussianProcessDigitalSeqB2G};f::Union{Nothing,Function}=nothing,β::Matrix{Int64}=[0 0;],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=32,markersize::Float64=16.,backgroundcolor::Symbol=:white)
+function plot_gp_2s(gp::FastGaussianProcess;f::Union{Nothing,Function}=nothing,β::Matrix{Int64}=[0 0;],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=32,markersize::Float64=16.,backgroundcolor::Symbol=:white)
     @assert gp.s==2
     n = size(β,1)
     cols = f===nothing ? 1 : 2
