@@ -24,7 +24,7 @@ mutable struct FastGaussianProcess
     NEGVARTHRESHOLD::Float64
 end
 
-function FastGaussianProcess(f::Function,seq::Union{LatticeSeqB2,RandomShift,DigitalSeqB2G,RandomDigitalShift},n::Int64;β::Union{Nothing,Matrix{Int64}}=nothing,α::Int64=4,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-16,optim_steps::Int64=320,learningrate::Float64=5e-2,decayrate::Float64=.9,verbose::Int64=40,NEGVARTHRESHOLD::Float64=-1e-12)
+function FastGaussianProcess(f::Function,seq::Union{LatticeSeqB2,RandomShift,DigitalSeqB2G,RandomDigitalShift},n::Int64;β::Union{Nothing,Matrix{Int64}}=nothing,α::Int64=4,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-16,optim_steps::Int64=320,learningrate::Float64=1e-1,decayrate::Float64=.9,verbose::Int64=40,NEGVARTHRESHOLD::Float64=-1e-12)
     s = typeof(seq) in [LatticeSeqB2,DigitalSeqB2G] ? seq.s : seq.seq.s
     if β===nothing β = zeros(Int64,1,s) else @assert size(β,2)==s "β must be a two dimensional matrix of size (n_β,s)" end
     n_β = size(β,1)

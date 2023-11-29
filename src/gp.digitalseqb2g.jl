@@ -1,3 +1,5 @@
+DEFAULTBITSFORFLOATCONVERT = 53
+
 function k4sumterm(_x::UInt64,t::Int64)
     total = BigFloat(0.) 
     for a1=0:t-1
@@ -21,5 +23,6 @@ end
 kernel_digshiftinvar_s1(_x1::UInt64,x2::Float64,β1::Int64,β2::Int64,α::Int64,t::Int64) = kernel_digshiftinvar_s1(_x1,Float64ToBinary(x2,t),β1,β2,α,t)
 kernel_digshiftinvar_s1(x1::Float64,_x2::UInt64,β1::Int64,β2::Int64,α::Int64,t::Int64) = kernel_digshiftinvar_s1(Float64ToBinary(x1,t),_x2,β1,β2,α,t)
 kernel_digshiftinvar_s1(x1::Float64,x2::Float64,β1::Int64,β2::Int64,α::Int64,t::Int64) = kernel_digshiftinvar_s1(Float64ToBinary(x1,t),Float64ToBinary(x2,t),β1,β2,α,t)
+kernel_digshiftinvar_s1(x1::Float64,x2::Float64,β1::Int64,β2::Int64,α::Int64) = kernel_digshiftinvar_s1(Float64ToBinary(x1,DEFAULTBITSFORFLOATCONVERT),Float64ToBinary(x2,DEFAULTBITSFORFLOATCONVERT),β1,β2,α,DEFAULTBITSFORFLOATCONVERT)
 
 GaussianProcessDigitalSeqB2G(f::Function,s::Int64,n::Int64;kwargs...) = FastGaussianProcess(f,RandomDigitalShift(DigitalSeqB2G(LinearMatrixScramble(s))),n;kwargs...)
