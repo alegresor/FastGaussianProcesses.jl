@@ -81,7 +81,7 @@ function _train(gp::FastGaussianProcess,verbose::Int64)
         k_nsy .= k_com; for k=1:gp.n_β k_nsy[1,k,k] += gp.ζ[k] end 
         gp.λ .= sqrt(gp.n).*conj.(gp.ft(k_nsy,1)) # block diagonal matrix of eigenvalues, but sparsely stored 3 dim array 
         for i=1:gp.n ν_hft[i,:] .= gp.λ[i,:,:]\y_hft[i,:] end 
-        gp.losses[step] += real.(sum(map(i->logdet(gp.λ[i,:,:])+y_hft[i,:]'*ν_hft[i,:],1:gp.n)))
+        gp.losses[step] = real.(sum(map(i->logdet(gp.λ[i,:,:])+y_hft[i,:]'*ν_hft[i,:],1:gp.n)))
         if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,gp.losses[step]) end
         if step == gp.optim_steps+1 break end 
         ∂k∂γ .= k_com./gp.γ
