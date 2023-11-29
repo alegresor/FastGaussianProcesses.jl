@@ -94,9 +94,9 @@ function plot_gp_1s(gp::FastGaussianProcess;f::Union{Nothing,Function}=nothing,�
         po = β[i]
         idx = findfirst(x->x==po,gp.β[:,1])
         if (f!==nothing)&&(idx!==nothing) CairoMakie.scatter!(ax,xticks,yticks[:,idx],color=JULIA4LOGOCOLORS[2],markersize=markersize/2,label=latexstring("\$f^{($po)}(x)\$")) end 
-        yhatticks = map(xtick->gp([xtick],[po]),xticks)
+        yhatticks = map(xtick->gp([xtick];β=[po]),xticks)
         CairoMakie.scatter!(ax,xticks,yhatticks,color=JULIA4LOGOCOLORS[1],markersize=markersize/2,label=latexstring("\$m_n^{($po)}(x)\$"))
-        stdhatticks = sqrt.(map(xtick->var_post(gp,[xtick],[po]),xticks))
+        stdhatticks = sqrt.(map(xtick->var_post(gp,[xtick];β=[po]),xticks))
         ci_low,ci_high = yhatticks.-q*stdhatticks,yhatticks.+q*stdhatticks
         CairoMakie.band!(ax,xticks,ci_low,ci_high,color=(JULIA4LOGOCOLORS[1],.25),label=latexstring("\$m_n^{($po)}(x) \\pm $(round(q,digits=2)) \\; \\sigma_n^{($pi)}(x)\$"))
         if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po)}_i)_{i=1}^{$(gp.n)}\$")) end 
@@ -124,7 +124,7 @@ function plot_gp_2s(gp::FastGaussianProcess;f::Union{Nothing,Function}=nothing,�
             CairoMakie.surface!(ax,xticks,xticks,ymesh,colormap=:julia_colorscheme) 
             CairoMakie.scatter!(ax,gp.x[:,1],gp.x[:,2],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po1,$po2)}_i)_{i=1}^{$(gp.n)}\$")) 
         end 
-        yhatticks = [gp([xticks[i],xticks[j]],po) for i=1:nxticks,j=1:nxticks]
+        yhatticks = [gp([xticks[i],xticks[j]];β=po) for i=1:nxticks,j=1:nxticks]
         ax = CairoMakie.Axis3(fig[i,f===nothing ? 1 : 3],xlabel=L"$x_1$",ylabel=L"$x_2$",zlabel="",title=latexstring("\$m_n^{($po1,$po2)}(x)\$")); CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax)
         CairoMakie.surface!(ax,xticks,xticks,yhatticks,colormap=:julia_colorscheme)
         if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.x[:,2],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po1,$po2)}_i)_{i=1}^{$(gp.n)}\$")) end 
