@@ -16,4 +16,4 @@ function kernel_shiftinvar_s1(x1::Float64,x2::Float64,β1::Int64,β2::Int64,α::
     (-1)^(α+1+β2)*prod((bpolyidx+1):(2*α))*BERNOULLIPOLYS[bpolyidx](mod(x1-x2,1))
 end 
 
-GaussianProcessLatticeSeqB2(f::Function,s::Int64,n::Int64;kwargs...) = FastGaussianProcess(f,RandomShift(LatticeSeqB2(s)),n;kwargs...)
+FastGaussianProcessLatticeSeqB2(f::Function,s::Int64,n::Int64;kwargs...) = FastGaussianProcess(f,RandomShift(LatticeSeqB2(s)),n;kwargs...)
