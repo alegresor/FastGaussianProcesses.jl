@@ -3,7 +3,7 @@ module FastGaussianProcesses
 using QMCGenerators
 import FFTW: fft
 import Hadamard: fwht_natural
-import LinearAlgebra: logdet,tr,diagm
+import LinearAlgebra: logdet,tr,diagm,cholesky,NoPivot,LowerTriangular
 import Printf: @printf
 import CairoMakie
 using LaTeXStrings
@@ -22,7 +22,7 @@ include("gp.fast.jl")
 export FastGaussianProcess,mean_post,cov_post,var_post
 
 include("gp.slow.jl")
-export GaussianProcess,mean_post,cov_post
+export GaussianProcessRBF,GaussianProcessRBFIIDU01,mean_post,cov_post
 
 include("gp.shared.jl")
 export var_post

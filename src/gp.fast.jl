@@ -64,11 +64,11 @@ function _train(gp::FastGaussianProcess,verbose::Int64)
     ∂k∂ζ = Array{Float64}(undef,gp.n_β,gp.n,gp.n_β,gp.n_β)
     ∂k∂θ = Array{Float64}(undef,p,gp.n,gp.n_β,gp.n_β)
     ∂λ∂θ = similar(gp.λ,p,gp.n,gp.n_β,gp.n_β)
-    ∂L∂θ = Array{Float64}(undef,p)
-    ∂L∂logθ = Array{Float64}(undef,p)
-    θ = Array{Float64}(undef,p)
+    ∂L∂θ = Vector{Float64}(undef,p)
+    ∂L∂logθ = Vector{Float64}(undef,p)
+    θ = Vector{Float64}(undef,p)
     Δ = zeros(Float64,p)
-    if verbosebool println("QGP Optimization Loss") end
+    if verbosebool println("Loss") end
     y_hft = conj.(gp.ft(gp.y,1))
     for step=1:gp.optim_steps+1
         gp.γs[step] = gp.γ; gp.ηs[step,:] .= gp.η; gp.ζs[step,:] .= gp.ζ
@@ -123,12 +123,12 @@ end
 function cov_post(gp::FastGaussianProcess,x1::Union{Vector{Float64},Vector{UInt64}},x2::Union{Vector{Float64},Vector{UInt64}};β1::Union{Nothing,Vector{Int64}}=nothing,β2::Union{Nothing,Vector{Int64}}=nothing)
     if β1===nothing β1 = zeros(Int64,gp.s) else @assert size(β1)==(gp.s,) "β1 must be a length s vector" end 
     if β2===nothing β2 = zeros(Int64,gp.s) else @assert size(β2)==(gp.s,) "β2 must be a length s vector" end 
-    k = _multidim_kernel(gp,x1,x2,β1,β2)
+    kval = _multidim_kernel(gp,x1,x2,β1,β2)
     k1 = [_multidim_kernel(gp,x1,gp._x[i,:],β1,gp.β[k,:]) for i=1:gp.n,k=1:gp.n_β] 
     k2 = [_multidim_kernel(gp,x2,gp._x[i,:],β2,gp.β[k,:]) for i=1:gp.n,k=1:gp.n_β] 
     k1_hft = conj.(gp.ft(k1,1)); k2_hft = conj.(gp.ft(k2,1))
     ν = similar(gp.λ,gp.n,gp.n_β); for i=1:gp.n ν[i,:] .= gp.λ[i,:,:]\k2_hft[i,:] end
-    k-real.(sum(conj.(k1_hft).*ν))
+    kval-real.(sum(conj.(k1_hft).*ν))
 end
 
 function var_post(gp::FastGaussianProcess,x::Vector{Float64};β::Union{Nothing,Vector{Int64}}=nothing)

@@ -81,7 +81,7 @@ function plot_gp_optimization(gp::FastGaussianProcess;backgroundcolor::Symbol=:w
     return fig
 end
 
-function plot_gp_1s(gp::FastGaussianProcess;f::Union{Nothing,Function}=nothing,β::Vector{Int64}=[0],uncertainty::Float64=.05,xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,markersize::Float64=16.,backgroundcolor::Symbol=:white)
+function plot_gp_1s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{Nothing,Function}=nothing,β::Vector{Int64}=[0],uncertainty::Float64=.05,xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,markersize::Float64=16.,backgroundcolor::Symbol=:white,fpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
     @assert gp.s==1 
     n = length(β)
     fig = CairoMakie.Figure(resolution=(800,n*500),backgroundcolor=backgroundcolor)
@@ -101,7 +101,8 @@ function plot_gp_1s(gp::FastGaussianProcess;f::Union{Nothing,Function}=nothing,�
         CairoMakie.band!(ax,xticks,ci_low,ci_high,color=(JULIA4LOGOCOLORS[1],.25),label=latexstring("\$m_n^{($po)}(x) \\pm $(round(q,digits=2)) \\; \\sigma_n^{($pi)}(x)\$"))
         if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po)}_i)_{i=1}^{$(gp.n)}\$")) end 
         CairoMakie.Legend(fig[2*i-1,1],ax,orientation=:horizontal,framevisible=false) 
-    end 
+    end
+    if fpath !== nothing CairoMakie.save(fpath,fig,px_per_unit=px_per_unit) end 
     fig 
 end
 
