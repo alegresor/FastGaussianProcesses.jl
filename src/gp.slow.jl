@@ -42,6 +42,12 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
     p = 1+gp.s+gp.n_β    
     k_com = Matrix{Float64}(undef,gp.n_β*gp.n,gp.n_β*gp.n)
     k_nsy = Matrix{Float64}(undef,gp.n_β*gp.n,gp.n_β*gp.n)
+    ∂k∂γ = Matrix{Float64}(undef,gp.n_β*gp.n,gp.n_β*gp.n)
+    ∂k∂η = Array{Float64}(undef,gp.s,gp.n_β*gp.n,gp.n_β*gp.n)
+    ∂k∂ζ = Array{Float64}(undef,gp.n_β,gp.n_β*gp.n,gp.n_β*gp.n)
+    ∂k∂θ = Array{Float64}(undef,p,gp.n_β*gp.n,gp.n_β*gp.n)
+    ∂L∂θ = Vector{Float64}(undef,p)
+    ∂L∂logθ = Vector{Float64}(undef,p)
     θ = Vector{Float64}(undef,p)
     Δ = zeros(Float64,p)
     if verbosebool println("Loss") end
@@ -57,27 +63,80 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
         gp.losses[step] = 2*logdet(gp.L)+gp.y[:]'*gp.ν
         if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,gp.losses[step]) end
         if step == gp.optim_steps+1 break end 
-        @assert false "hyperparameter optimization not implemented"
+        ∂k∂γ .= k_com./gp.γ
+        for jj=1:gp.s 
+            for k=1:gp.n_β,l=1:gp.n_β
+                rs,cs = (k-1)*gp.n,(l-1)*gp.n
+                for i=1:gp.n,j=1:gp.n ∂k∂η[jj,rs+i,cs+j] = _∂ηl_rbf_kernel(gp.x[i,:],gp.x[j,:],gp.β[k,:],gp.β[l,:],gp.γ,gp.η,jj) end 
+            end
+        end
+        ∂k∂ζ .= 0; for j=1:gp.n_β, k=1:gp.n ∂k∂ζ[j,(j-1)*gp.n+k,(j-1)*gp.n+k] = 1 end
+        θ[1] = gp.γ; θ[2:gp.s+1] .= gp.η; θ[gp.s+2:end] .= gp.ζ
+        ∂k∂θ[1,:,:] .= ∂k∂γ; 
+        ∂k∂θ[2:gp.s+1,:,:] .= ∂k∂η; 
+        ∂k∂θ[gp.s+2:end,:,:] .= ∂k∂ζ
+        for j=1:p ∂L∂θ[j,:,:] .= sum(map(k->(gp.L'\(gp.L\∂k∂θ[j,k,:]))[k],1:gp.n_β*gp.n))-gp.ν'*∂k∂θ[j,:,:]*gp.ν end
+        ∂L∂logθ .= ∂L∂θ.*θ # since ∂θ∂logθ = θ
+        Δ .= gp.decayrate*Δ.+(1-gp.decayrate)*∂L∂logθ.^2
+        θ .= exp.(log.(θ)-gp.learningrate*Δ.^(-1/2).*∂L∂logθ)
+        gp.γ = θ[1]; gp.η .= θ[2:1+gp.s]; gp.ζ .= θ[2+gp.s:end]
     end
     gp
 end
 
 function _rbf_kernel(x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},γ::Float64,η::Vector{Float64})
-    @assert all(0 .≤ β1 .≤ 1);@assert all(0 .≤ β2 .≤ 1); @assert all(0 .≤ sum(β1) .≤ 1); @assert all(0 .≤ sum(β2) .≤ 1);
+    @assert all(0 .≤ β1 .≤ 1);@assert all(0 .≤ β2 .≤ 1); @assert all(0 .≤ sum(β1) .≤ 1); @assert all(0 .≤ sum(β2) .≤ 1)
     i1,i2 = findfirst(b->b==1,β1),findfirst(b->b==1,β2)
+    k00 = γ*exp(-sum(((x1.-x2).^2)./η))
     if (i1===nothing)&(i2===nothing) # no derivatives 
-        return γ*exp(-sum(((x1.-x2).^2)./η))
-    elseif i2===nothing # ∂x[i1]
-        return γ*exp(-sum(((x1.-x2).^2)./η))*(-2*(x1[i1]-x2[i1])/η[i1])
-    elseif i1===nothing # ∂x[i2]
-        return γ*exp(-sum(((x1.-x2).^2)./η))*(2*(x1[i2]-x2[i2])/η[i2])
+        return k00
+    elseif i2===nothing # ∂x1[i1]
+        return -2*k00*(x1[i1]-x2[i1])/η[i1]
+    elseif i1===nothing # ∂x2[i2]
+        return 2*k00*(x1[i2]-x2[i2])/η[i2]
     elseif i1 ≠ i2 # ∂x1[i1]∂x2[i2] for i1 ≠ i2
-        return γ*exp(-sum(((x1.-x2).^2)./η))*(-2*(x1[i1]-x2[i1])/η[i1])*(2*(x1[i2]-x2[i2])/η[i2])
+        return -4*k00*(x1[i1]-x2[i1])/η[i1]*(x1[i2]-x2[i2])/η[i2]
     elseif β1 == β2 # ∂x1[i]∂x2[i] for i=i1=i2
-        i = i1 # =i2
-        γ*exp(-sum(((x1.-x2).^2)./η))*(-4*((x1[i]-x2[i])/η[i])^2 + 2/η[i])
+        i = i1 # = i2
+        return -2*k00*(2*(x1[i]-x2[i])^2/η[i]^2 - 1/η[i])
     else @assert false "programming cases error with β1=$β1 and β2=$β2" end 
 end 
+
+function _∂ηl_rbf_kernel(x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},γ,η::Vector{Float64},l::Int64)
+    @assert all(0 .≤ β1 .≤ 1);@assert all(0 .≤ β2 .≤ 1); @assert all(0 .≤ sum(β1) .≤ 1); @assert all(0 .≤ sum(β2) .≤ 1)
+    i1,i2 = findfirst(b->b==1,β1),findfirst(b->b==1,β2)
+    k00 = γ*exp(-sum(((x1.-x2).^2)./η))
+    if (i1===nothing)&(i2===nothing) # no derivatives 
+        return k00*(x1[l]-x2[l])^2/η[l]^2
+    elseif i2===nothing # ∂x1[i1]
+        if l==i1
+            return -2*k00*((x1[l]-x2[l])^3/η[l]^3-(x1[l]-x2[l])/η[l]^2)
+        else # l ≠ i1 
+            return -2*k00*(x1[i1]-x2[i1])/η[i1]*(x1[l]-x2[l])^2/η[l]^2
+        end  
+    elseif i1===nothing # ∂x2[i2]
+        if l==i2
+            return 2*k00*((x1[l]-x2[l])^3/η[l]^3-(x1[l]-x2[l])/η[l]^2)
+        else # l ≠ i2 
+            return 2*k00*(x1[i2]-x2[i2])/η[i2]*(x1[l]-x2[l])^2/η[l]^2
+        end  
+    elseif i1 ≠ i2 # ∂x1[i1]∂x2[i2] for i1 ≠ i2
+        if l==i1 
+            return -4*k00*((x1[l]-x2[l])^3/η[l]^3-(x1[l]-x2[l])/η[l]^2)*(x1[i2]-x2[i2])/η[i2]
+        elseif l==i2  
+            return -4*k00*((x1[l]-x2[l])^3/η[l]^3-(x1[l]-x2[l])/η[l]^2)*(x1[i1]-x2[i1])/η[i1]
+        else # l ∉ {i1,i2}
+            return -4*k00*(x1[i1]-x2[i1])/η[i1]*(x1[i2]-x2[i2])/η[i2]*(x1[l]-x2[l])^2/η[l]^2
+        end 
+    elseif β1 == β2 # ∂x1[i]∂x2[i] for i=i1=i2
+        i = i1 # = i2
+        if l==i
+            return -2*k00*((x1[l]-x2[l])^2/η[l]^2*(2*(x1[l]-x2[l])^2/η[l]^2-1/η[l])+(1/η[l]^2-4*(x1[i]-x2[i])^2/η[i]^3))
+        else # l ≠ i
+            return -2*k00*(2*(x1[i]-x2[i])^2/η[i]^2-1/η[i])*(x1[l]-x2[l])^2/η[l]^2
+        end
+    else @assert false "programming cases error with β1=$β1 and β2=$β2" end 
+end
 
 function mean_post(gp::GaussianProcessRBF,x::Vector{Float64};β::Union{Nothing,Vector{Int64}}=nothing)
     if β===nothing β = zeros(Int64,gp.s) else @assert size(β)==(gp.s,) "β must be a length s vector" end 
