@@ -1,24 +1,42 @@
-function plot_gp_kernel_1s_lines(kernel_func::Function,x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},α::Vector{Int64},γ::Vector{Float64},η::Vector{Float64},xmin::Float64,xmax::Float64,nxticks::Int64,markersize::Float64,backgroundcolor::Symbol)
+function plot_gp_fast_kernel_1s_lines(kernel_func::Function,x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},α::Vector{Int64},γ::Vector{Float64},η::Vector{Float64},xmin::Float64,xmax::Float64,nxticks::Int64,markersize::Float64,backgroundcolor::Symbol,figpath::Union{Nothing,String},px_per_unit::Int64)
     fig = CairoMakie.Figure(resolution=(800,400),backgroundcolor=backgroundcolor)
     ax = CairoMakie.Axis(fig[1,1], 
         xlabel = L"$x_1$",
         ylabel = L"$K^{(\beta_1,\beta_2)}(x_1,\; x_2 \; | \; \alpha \; \gamma, \; \eta)",
         backgroundcolor = backgroundcolor)
     xticks = Vector(xmin:(xmax-xmin)/nxticks:xmax)[1:end-1]
-    n = length(α); @assert n≤length(JULIA4LOGOCOLORS)
+    n = length(γ); @assert n≤length(JULIA4LOGOCOLORS)
     for k=1:n
         kticks = [γ[k]*(β1[k]+β2[k] == 0 ? 1+η[k]*kernel_func(xticks[i],x2[k],β1[k],β2[k],α[k]) : η[k]*kernel_func(xticks[i],x2[k],β1[k],β2[k],α[k])) for i=1:nxticks]
         label = latexstring("\$x_2 = $(x2[k]), \\; \\beta_1 = $(β1[k]), \\; \\beta_2 = $(β2[k]), \\; \\alpha = $(α[k]), \\; \\gamma = $(γ[k]), \\; \\eta = $(η[k])\$")
         CairoMakie.scatter!(ax,xticks,kticks,color=JULIA4LOGOCOLORS[k],markersize=markersize,label=label)
     end 
     CairoMakie.Legend(fig[1,2],ax,framevisible=false)
+    if figpath !== nothing CairoMakie.save(figpath,fig,px_per_unit=px_per_unit) end 
     fig
 end
-plot_gp_kernel_latticeseqb2_1s_lines(;x2::Vector{Float64}=[0.,0.,0.,0.],β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],α::Vector{Int64}=[2,2,2,2],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=1024,markersize::Float64=8.,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_lines(kernel_shiftinvar_s1,x2,β1,β2,α,γ,η,xmin,xmax,nxticks,markersize,backgroundcolor)
-plot_gp_kernel_digitalseqb2g_1s_lines(;x2::Vector{Float64}=[0.,0.,0.],β1::Vector{Int64}=[0,1,1],β2::Vector{Int64}=[0,0,1],α::Vector{Int64}=[4,4,4],γ::Vector{Float64}=[1.,1.,1.],η::Vector{Float64}=[1.,1.,1.],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,markersize::Float64=8.,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_lines(kernel_digshiftinvar_s1,x2,β1,β2,α,γ,η,xmin,xmax,nxticks,markersize,backgroundcolor)
+plot_gp_kernel_latticeseqb2_1s_lines(;x2::Vector{Float64}=[0.,0.,0.,0.],β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],α::Vector{Int64}=[2,2,2,2],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=1024,markersize::Float64=8.,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4) = plot_gp_fast_kernel_1s_lines(kernel_shiftinvar_s1,x2,β1,β2,α,γ,η,xmin,xmax,nxticks,markersize,backgroundcolor,figpath,px_per_unit)
+plot_gp_kernel_digitalseqb2g_1s_lines(;x2::Vector{Float64}=[0.,0.,0.],β1::Vector{Int64}=[0,1,1],β2::Vector{Int64}=[0,0,1],α::Vector{Int64}=[4,4,4],γ::Vector{Float64}=[1.,1.,1.],η::Vector{Float64}=[1.,1.,1.],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,markersize::Float64=8.,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4) = plot_gp_fast_kernel_1s_lines(kernel_digshiftinvar_s1,x2,β1,β2,α,γ,η,xmin,xmax,nxticks,markersize,backgroundcolor,figpath,px_per_unit)
+function plot_gp_kernel_rbf_1s_lines(;x2::Vector{Float64}=[0.,0.,0.,0.],β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-3.5,xmax::Float64=3.5,nxticks::Int64=1024,markersize::Float64=8.,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
+    fig = CairoMakie.Figure(resolution=(800,400),backgroundcolor=backgroundcolor)
+    ax = CairoMakie.Axis(fig[1,1], 
+        xlabel = L"$x_1$",
+        ylabel = L"$K^{(\beta_1,\beta_2)}(x_1,\; x_2 \; | \; \gamma, \; \eta)",
+        backgroundcolor = backgroundcolor)
+    xticks = Vector(xmin:(xmax-xmin)/nxticks:xmax)[1:end-1]
+    n = length(γ); @assert n≤length(JULIA4LOGOCOLORS)
+    for k=1:n
+        kticks = [rbf_kernel([xticks[i]],[x2[k]],[β1[k]],[β2[k]],γ[k],[η[k]]) for i=1:nxticks]
+        label = latexstring("\$x_2 = $(x2[k]), \\; \\beta_1 = $(β1[k]), \\; \\beta_2 = $(β2[k]), \\; \\gamma = $(γ[k]), \\; \\eta = $(η[k])\$")
+        CairoMakie.scatter!(ax,xticks,kticks,color=JULIA4LOGOCOLORS[k],markersize=markersize,label=label)
+    end 
+    CairoMakie.Legend(fig[1,2],ax,framevisible=false)
+    if figpath !== nothing CairoMakie.save(figpath,fig,px_per_unit=px_per_unit) end 
+    fig
+end 
 
-function plot_gp_kernel_1s_contsurfs(kernel_func::Function,β1::Vector{Int64},β2::Vector{Int64},α::Vector{Int64},γ::Vector{Float64},η::Vector{Float64},xmin::Float64,xmax::Float64,nxticks::Int64,backgroundcolor::Symbol)
-    n = length(α)
+function plot_gp_kernel_1s_contsurfs(kernel_func::Function,β1::Vector{Int64},β2::Vector{Int64},α::Vector{Int64},γ::Vector{Float64},η::Vector{Float64},xmin::Float64,xmax::Float64,nxticks::Int64,backgroundcolor::Symbol,figpath::Union{Nothing,String},px_per_unit::Int64)
+    n = length(γ)
     fig = CairoMakie.Figure(resolution=(800,310*n),backgroundcolor=backgroundcolor)
     x1ticks = Vector(xmin:(xmax-xmin)/nxticks:xmax)[1:end-1]
     x2ticks = copy(x1ticks)
@@ -41,12 +59,40 @@ function plot_gp_kernel_1s_contsurfs(kernel_func::Function,β1::Vector{Int64},β
         CairoMakie.heatmap!(ax,x1ticks,x2ticks,karr,colormap=:julia_colorscheme,colorrange=(kmin,kmax))
         CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax);
     end 
+    if figpath !== nothing CairoMakie.save(figpath,fig,px_per_unit=px_per_unit) end 
     fig
 end
-plot_gp_kernel_latticeseqb2_1s_contsurfs(;β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],α::Vector{Int64}=[2,2,2,2],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=128,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_contsurfs(kernel_shiftinvar_s1,β1,β2,α,γ,η,xmin,xmax,nxticks,backgroundcolor)
-plot_gp_kernel_digitalseqb2g_1s_contsurfs(;β1::Vector{Int64}=[0,1,1],β2::Vector{Int64}=[0,0,1],α::Vector{Int64}=[4,4,4],γ::Vector{Float64}=[1.,1.,1.],η::Vector{Float64}=[1.,1.,1.],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=128,backgroundcolor::Symbol=:white) = plot_gp_kernel_1s_contsurfs(kernel_digshiftinvar_s1,β1,β2,α,γ,η,xmin,xmax,nxticks,backgroundcolor)
+plot_gp_kernel_latticeseqb2_1s_contsurfs(;β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],α::Vector{Int64}=[2,2,2,2],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-.1,xmax::Float64=1.1,nxticks::Int64=128,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4) = plot_gp_kernel_1s_contsurfs(kernel_shiftinvar_s1,β1,β2,α,γ,η,xmin,xmax,nxticks,backgroundcolor,figpath,px_per_unit)
+plot_gp_kernel_digitalseqb2g_1s_contsurfs(;β1::Vector{Int64}=[0,1,1],β2::Vector{Int64}=[0,0,1],α::Vector{Int64}=[4,4,4],γ::Vector{Float64}=[1.,1.,1.],η::Vector{Float64}=[1.,1.,1.],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=128,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4) = plot_gp_kernel_1s_contsurfs(kernel_digshiftinvar_s1,β1,β2,α,γ,η,xmin,xmax,nxticks,backgroundcolor,figpath,px_per_unit)
+function plot_gp_kernel_rbf_1s_contsurfs(;β1::Vector{Int64}=[0,1,0,1],β2::Vector{Int64}=[0,0,1,1],γ::Vector{Float64}=[1.,1.,1.,1.],η::Vector{Float64}=[1.,1.,1.,1.],xmin::Float64=-3.5,xmax::Float64=3.5,nxticks::Int64=128,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
+    n = length(γ)
+    fig = CairoMakie.Figure(resolution=(800,310*n),backgroundcolor=backgroundcolor)
+    x1ticks = Vector(xmin:(xmax-xmin)/nxticks:xmax)[1:end-1]
+    x2ticks = copy(x1ticks)
+    for k=1:n 
+        karr = [rbf_kernel([x1ticks[i]],[x2ticks[j]],[β1[k]],[β2[k]],γ[k],[η[k]]) for i=1:nxticks,j=1:nxticks]
+        kmin,kmax = minimum(karr),maximum(karr)
+        ax = CairoMakie.Axis3(fig[k,1],
+            xlabel = L"$x_1$",
+            ylabel = L"$x_2$",
+            zlabel = L"$K^{(\beta_1,\beta_2)}(x_1,\; x_2 \; | \; \gamma, \; \eta)",
+            title = latexstring("\$\\beta_1 = $(β1[k]), \\; \\beta_2 = $(β2[k]), \\; \\gamma = $(γ[k]), \\; \\eta = $(η[k])\$"),
+            backgroundcolor = backgroundcolor)
+        CairoMakie.surface!(ax,x1ticks,x2ticks,karr,colormap=:julia_colorscheme,colorrange=(kmin,kmax))
+        CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax); CairoMakie.zlims!(kmin,kmax)
+        ax = CairoMakie.Axis(fig[k,2],
+            xlabel = L"$x_1$",
+            ylabel = L"$x_2$",
+            aspect = 1,
+            backgroundcolor = backgroundcolor)
+        CairoMakie.heatmap!(ax,x1ticks,x2ticks,karr,colormap=:julia_colorscheme,colorrange=(kmin,kmax))
+        CairoMakie.xlims!(ax,xmin,xmax); CairoMakie.ylims!(ax,xmin,xmax);
+    end 
+    if figpath !== nothing CairoMakie.save(figpath,fig,px_per_unit=px_per_unit) end 
+    fig
+end 
 
-function plot_gp_optimization(gp::FastGaussianProcess;backgroundcolor::Symbol=:white)
+function plot_gp_optimization(gp::Union{FastGaussianProcess,GaussianProcessRBF};backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
     noptsp1 = length(gp.losses)
     @assert noptsp1>1
     xrange = [k for k=0:noptsp1-1]
@@ -78,10 +124,11 @@ function plot_gp_optimization(gp::FastGaussianProcess;backgroundcolor::Symbol=:w
     CairoMakie.xlims!(axζ,0,noptsp1-1)
     CairoMakie.linkxaxes!(axloss,axη)
     CairoMakie.linkxaxes!(axγ,axζ)
+    if figpath !== nothing CairoMakie.save(figpath,fig,px_per_unit=px_per_unit) end 
     return fig
 end
 
-function plot_gp_1s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{Nothing,Function}=nothing,β::Vector{Int64}=[0],uncertainty::Float64=.05,xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,markersize::Float64=16.,backgroundcolor::Symbol=:white,fpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
+function plot_gp_1s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{Nothing,Function}=nothing,β::Vector{Int64}=[0],uncertainty::Float64=.05,xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=1024,markersize::Float64=16.,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
     @assert gp.s==1 
     n = length(β)
     fig = CairoMakie.Figure(resolution=(800,n*500),backgroundcolor=backgroundcolor)
@@ -102,11 +149,11 @@ function plot_gp_1s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{N
         if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po)}_i)_{i=1}^{$(gp.n)}\$")) end 
         CairoMakie.Legend(fig[2*i-1,1],ax,orientation=:horizontal,framevisible=false) 
     end
-    if fpath !== nothing CairoMakie.save(fpath,fig,px_per_unit=px_per_unit) end 
+    if figpath !== nothing CairoMakie.save(figpath,fig,px_per_unit=px_per_unit) end 
     fig 
 end
 
-function plot_gp_2s(gp::FastGaussianProcess;f::Union{Nothing,Function}=nothing,β::Matrix{Int64}=[0 0;],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=32,markersize::Float64=16.,backgroundcolor::Symbol=:white)
+function plot_gp_2s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{Nothing,Function}=nothing,β::Matrix{Int64}=[0 0;],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=32,markersize::Float64=16.,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
     @assert gp.s==2
     n = size(β,1)
     cols = f===nothing ? 1 : 2
@@ -133,5 +180,6 @@ function plot_gp_2s(gp::FastGaussianProcess;f::Union{Nothing,Function}=nothing,�
         CairoMakie.heatmap!(ax,xticks,xticks,yhatticks,colormap=:julia_colorscheme)
         if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.x[:,2],markersize=markersize,color=:black,label=latexstring("\$(y^{($po1,$po2)}_i)_{i=1}^{$(gp.n)}\$")) end 
     end
+    if figpath !== nothing CairoMakie.save(figpath,fig,px_per_unit=px_per_unit) end 
     fig
 end 

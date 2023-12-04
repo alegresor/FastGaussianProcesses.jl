@@ -20,7 +20,7 @@ mutable struct GaussianProcessRBF
     NEGVARTHRESHOLD::Float64
 end
 
-function GaussianProcessRBF(x::Matrix{Float64},y::Matrix{Float64};β::Union{Nothing,Matrix{Int64}}=nothing,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-16,optim_steps::Int64=320,learningrate::Float64=1e-1,decayrate::Float64=.9,verbose::Int64=40,NEGVARTHRESHOLD::Float64=-1e-12)
+function GaussianProcessRBF(x::Matrix{Float64},y::Matrix{Float64};β::Union{Nothing,Matrix{Int64}}=nothing,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-12,optim_steps::Int64=320,learningrate::Float64=1e-1,decayrate::Float64=.9,verbose::Int64=40,NEGVARTHRESHOLD::Float64=-1e-12)
     n,s = size(x)
     if β===nothing β = zeros(Int64,1,s) else @assert size(β,2)==s "β must be a two dimensional matrix of size (n_β,s)" end; @assert β[1,:]==zeros(s); 
     n_β = size(β,1); @assert all(0 .≤ β .≤ 1); @assert all(0 .≤ sum(β,dims=2) .≤ 1)
@@ -55,10 +55,11 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
         gp.γs[step] = gp.γ; gp.ηs[step,:] .= gp.η; gp.ζs[step,:] .= gp.ζ
         for k=1:gp.n_β,l=1:gp.n_β
             rs,cs = (k-1)*gp.n,(l-1)*gp.n
-            for i=1:gp.n,j=1:gp.n k_com[rs+i,cs+j] = _rbf_kernel(gp.x[i,:],gp.x[j,:],gp.β[k,:],gp.β[l,:],gp.γ,gp.η) end 
+            for i=1:gp.n,j=1:gp.n k_com[rs+i,cs+j] = rbf_kernel(gp.x[i,:],gp.x[j,:],gp.β[k,:],gp.β[l,:],gp.γ,gp.η) end 
         end
         k_nsy .= k_com; for k=1:gp.n_β k_nsy[(k-1)*gp.n+1:k*gp.n,(k-1)*gp.n+1:k*gp.n] .+= diagm(gp.ζ[k]*ones(Float64,gp.n)) end
-        gp.L .= cholesky(k_nsy,NoPivot()).L # k_nsy = gp.L*gp.L'
+        k_nsy .= (k_nsy + k_nsy')./2 # force Hermitian (account for numerical errors)
+        gp.L .=  cholesky(k_nsy,NoPivot()).L # k_nsy = gp.L*gp.L'
         gp.ν = gp.L'\(gp.L\gp.y[:]) # k_nsy^{-1}y  solves  L(L'ν) = y
         gp.losses[step] = 2*logdet(gp.L)+gp.y[:]'*gp.ν
         if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,gp.losses[step]) end
@@ -84,7 +85,7 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
     gp
 end
 
-function _rbf_kernel(x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},γ::Float64,η::Vector{Float64})
+function rbf_kernel(x1::Vector{Float64},x2::Vector{Float64},β1::Vector{Int64},β2::Vector{Int64},γ::Float64,η::Vector{Float64})
     @assert all(0 .≤ β1 .≤ 1);@assert all(0 .≤ β2 .≤ 1); @assert all(0 .≤ sum(β1) .≤ 1); @assert all(0 .≤ sum(β2) .≤ 1)
     i1,i2 = findfirst(b->b==1,β1),findfirst(b->b==1,β2)
     k00 = γ*exp(-sum(((x1.-x2).^2)./η))
@@ -140,7 +141,7 @@ end
 
 function mean_post(gp::GaussianProcessRBF,x::Vector{Float64};β::Union{Nothing,Vector{Int64}}=nothing)
     if β===nothing β = zeros(Int64,gp.s) else @assert size(β)==(gp.s,) "β must be a length s vector" end 
-    k1 = [_rbf_kernel(x,gp.x[i,:],β,gp.β[k,:],gp.γ,gp.η) for i=1:gp.n,k=1:gp.n_β]
+    k1 = [rbf_kernel(x,gp.x[i,:],β,gp.β[k,:],gp.γ,gp.η) for i=1:gp.n,k=1:gp.n_β]
     k1[:]'*gp.ν
 end 
 (gp::GaussianProcessRBF)(x::Vector{Float64};kwargs...) = mean_post(gp,x;kwargs...)
@@ -148,8 +149,8 @@ end
 function cov_post(gp::GaussianProcessRBF,x1::Vector{Float64},x2::Vector{Float64};β1::Union{Nothing,Vector{Int64}}=nothing,β2::Union{Nothing,Vector{Int64}}=nothing)
     if β1===nothing β1 = zeros(Int64,gp.s) else @assert size(β1)==(gp.s,) "β1 must be a length s vector" end 
     if β2===nothing β2 = zeros(Int64,gp.s) else @assert size(β2)==(gp.s,) "β2 must be a length s vector" end 
-    kval = _rbf_kernel(x1,x2,β1,β2,gp.γ,gp.η)
-    k1 = [_rbf_kernel(x1,gp.x[i,:],β1,gp.β[k,:],gp.γ,gp.η) for i=1:gp.n,k=1:gp.n_β]
-    k2 = [_rbf_kernel(x2,gp.x[i,:],β2,gp.β[k,:],gp.γ,gp.η) for i=1:gp.n,k=1:gp.n_β]
+    kval = rbf_kernel(x1,x2,β1,β2,gp.γ,gp.η)
+    k1 = [rbf_kernel(x1,gp.x[i,:],β1,gp.β[k,:],gp.γ,gp.η) for i=1:gp.n,k=1:gp.n_β]
+    k2 = [rbf_kernel(x2,gp.x[i,:],β2,gp.β[k,:],gp.γ,gp.η) for i=1:gp.n,k=1:gp.n_β]
     kval - k1[:]'*(gp.L'\(gp.L\k2[:]))
 end
