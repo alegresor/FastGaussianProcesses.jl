@@ -153,7 +153,7 @@ function plot_gp_1s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{N
     fig 
 end
 
-function plot_gp_2s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{Nothing,Function}=nothing,β::Matrix{Int64}=[0 0;],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=32,markersize::Float64=16.,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
+function plot_gp_2s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{Nothing,Function}=nothing,β::Matrix{Int64}=[0 0;],xmin::Float64=0.,xmax::Float64=1.,nxticks::Int64=32,markersize::Float64=4.,backgroundcolor::Symbol=:white,figpath::Union{Nothing,String}=nothing,px_per_unit::Int64=4)
     @assert gp.s==2
     n = size(β,1)
     cols = f===nothing ? 1 : 2

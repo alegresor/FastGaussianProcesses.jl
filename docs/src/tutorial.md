@@ -252,7 +252,7 @@ Figure()
 #### Visualize
 
 ```jldoctest plots; output = false
-plot_gp_2s(gp_2s_latticeseqb2;f=f2s,β=[0 0; 1 0; 0 1; 1 1],figpath=joinpath(PLOTDIR,"gp.2s.latticeseqb2.svg"))
+plot_gp_2s(gp_2s_latticeseqb2;f=f2s,β=[0 0; 1 0; 0 1],figpath=joinpath(PLOTDIR,"gp.2s.latticeseqb2.svg"))
 # output
 Figure()
 ```
@@ -260,7 +260,7 @@ Figure()
 ![image](./assets/gp.2s.latticeseqb2.svg)
 
 ```jldoctest plots; output = false
-plot_gp_2s(gp_2s_digitalseqb2g;f=f2s,β=[0 0; 1 0; 0 1; 1 1],figpath=joinpath(PLOTDIR,"gp.2s.digitalseqb2g.svg"))
+plot_gp_2s(gp_2s_digitalseqb2g;f=f2s,β=[0 0; 1 0; 0 1],figpath=joinpath(PLOTDIR,"gp.2s.digitalseqb2g.svg"))
 # output
 Figure()
 ```
@@ -268,7 +268,7 @@ Figure()
 ![image](./assets/gp.2s.digitalseqb2g.svg)
 
 ```jldoctest plots; output = false
-plot_gp_2s(gp_2s_rbf;f=f2s,β=[0 0; 1 0; 0 1; 1 1],figpath=joinpath(PLOTDIR,"gp.2s.rbf.svg"))
+plot_gp_2s(gp_2s_rbf;f=f2s,β=[0 0; 1 0; 0 1],figpath=joinpath(PLOTDIR,"gp.2s.rbf.svg"))
 # output
 Figure()
 ```
