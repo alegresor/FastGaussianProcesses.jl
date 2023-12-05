@@ -268,7 +268,7 @@ Figure()
 ![image](./assets/gp.2s.digitalseqb2g.svg)
 
 ```jldoctest plots; output = false
-plot_gp_1s(gp_2s_rbf;f=f2s,β=[0 0; 1 0; 0 1; 1 1],figpath=joinpath(PLOTDIR,"gp.2s.rbf.svg"))
+plot_gp_2s(gp_2s_rbf;f=f2s,β=[0 0; 1 0; 0 1; 1 1],figpath=joinpath(PLOTDIR,"gp.2s.rbf.svg"))
 # output
 Figure()
 ```
