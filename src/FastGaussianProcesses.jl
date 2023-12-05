@@ -3,7 +3,7 @@ module FastGaussianProcesses
 using QMCGenerators
 import FFTW: fft
 import Hadamard: fwht_natural
-import LinearAlgebra: logdet,tr,diagm,cholesky,NoPivot,LowerTriangular
+import LinearAlgebra: logdet,tr,diagm,eigen
 import Printf: @printf
 import CairoMakie
 using LaTeXStrings

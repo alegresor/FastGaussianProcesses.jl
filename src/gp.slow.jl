@@ -9,7 +9,8 @@ mutable struct GaussianProcessRBF
     x::Matrix{Float64}
     y::Matrix{Float64}
     ν::Vector{Float64}
-    L::LowerTriangular{Float64, Matrix{Float64}}
+    evecs::Matrix{Float64}
+    evals::Vector{Float64}
     losses::Vector{Float64}
     γs::Vector{Float64}
     ηs::Matrix{Float64}
@@ -27,7 +28,7 @@ function GaussianProcessRBF(x::Matrix{Float64},y::Matrix{Float64};β::Union{Noth
     @assert size(β,2) == s;   @assert size(y) == (n,n_β) "the number of columns in y must equal the number of rows of β"
     if typeof(η)==Float64 η = η*ones(Float64,s) else @assert size(η)==(s,) "η must be a vector of length s or a Float64 which gets copied to each element" end 
     if typeof(ζ)==Float64 ζ = ζ*ones(Float64,n_β) else @assert size(ζ)==(n_β,) "ζ must be a vector of length n_β or a Float64 which gets copied to each element" end
-    gp = GaussianProcessRBF(s,n,γ,η,ζ,β,n_β,x,y,Vector{Float64}(undef,n_β*n),LowerTriangular(Matrix{Float64}(undef,n_β*n,n_β*n)),Vector{Float64}(undef,optim_steps+1),Vector{Float64}(undef,optim_steps+1),Matrix{Float64}(undef,optim_steps+1,s),Matrix{Float64}(undef,optim_steps+1,n_β),optim_steps,learningrate,decayrate,NEGVARTHRESHOLD)
+    gp = GaussianProcessRBF(s,n,γ,η,ζ,β,n_β,x,y,Vector{Float64}(undef,n_β*n),Matrix{Float64}(undef,n_β*n,n_β*n),Vector{Float64}(undef,n_β*n),Vector{Float64}(undef,optim_steps+1),Vector{Float64}(undef,optim_steps+1),Matrix{Float64}(undef,optim_steps+1,s),Matrix{Float64}(undef,optim_steps+1,n_β),optim_steps,learningrate,decayrate,NEGVARTHRESHOLD)
     _train(gp,verbose) 
 end
 function GaussianProcessRBF(f::Function,seq::IIDU01Seq,n::Int64;kwargs...) 
@@ -58,11 +59,10 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
             for i=1:gp.n,j=1:gp.n k_com[rs+i,cs+j] = rbf_kernel(gp.x[i,:],gp.x[j,:],gp.β[k,:],gp.β[l,:],gp.γ,gp.η) end 
         end
         k_nsy .= k_com; for k=1:gp.n_β k_nsy[(k-1)*gp.n+1:k*gp.n,(k-1)*gp.n+1:k*gp.n] .+= diagm(gp.ζ[k]*ones(Float64,gp.n)) end
-        k_nsy .= (k_nsy + k_nsy')./2 # force Hermitian (account for numerical errors)
-        gp.L .=  cholesky(k_nsy,NoPivot()).L # k_nsy = gp.L*gp.L'
-        gp.ν = gp.L'\(gp.L\gp.y[:]) # k_nsy^{-1}y  solves  L(L'ν) = y
-        gp.losses[step] = 2*logdet(gp.L)+gp.y[:]'*gp.ν
-        if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,gp.losses[step]) end
+        decomp = eigen((k_nsy + k_nsy')./2 ); gp.evecs .= decomp.vectors; gp.evals .= max.(decomp.values,0) # k_nsy = evecs*diagm(evals)*evecs'
+        gp.ν = gp.evecs*(gp.evecs'*gp.y[:]./gp.evals)
+        gp.losses[step] = logdet(gp.evecs*diagm(gp.evals)*gp.evecs')+gp.y[:]'*gp.ν
+        if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,gp.losses[step]); end
         if step == gp.optim_steps+1 break end 
         ∂k∂γ .= k_com./gp.γ
         for jj=1:gp.s 
@@ -76,7 +76,7 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
         ∂k∂θ[1,:,:] .= ∂k∂γ; 
         ∂k∂θ[2:gp.s+1,:,:] .= ∂k∂η; 
         ∂k∂θ[gp.s+2:end,:,:] .= ∂k∂ζ
-        for j=1:p ∂L∂θ[j,:,:] .= sum(map(k->(gp.L'\(gp.L\∂k∂θ[j,k,:]))[k],1:gp.n_β*gp.n))-gp.ν'*∂k∂θ[j,:,:]*gp.ν end
+        for j=1:p ∂L∂θ[j,:,:] .= sum(map(k->(gp.evecs*(gp.evecs'*∂k∂θ[j,k,:]./gp.evals))[k],1:gp.n_β*gp.n))-gp.ν'*∂k∂θ[j,:,:]*gp.ν end
         ∂L∂logθ .= ∂L∂θ.*θ # since ∂θ∂logθ = θ
         Δ .= gp.decayrate*Δ.+(1-gp.decayrate)*∂L∂logθ.^2
         θ .= exp.(log.(θ)-gp.learningrate*Δ.^(-1/2).*∂L∂logθ)
@@ -152,5 +152,5 @@ function cov_post(gp::GaussianProcessRBF,x1::Vector{Float64},x2::Vector{Float64}
     kval = rbf_kernel(x1,x2,β1,β2,gp.γ,gp.η)
     k1 = [rbf_kernel(x1,gp.x[i,:],β1,gp.β[k,:],gp.γ,gp.η) for i=1:gp.n,k=1:gp.n_β]
     k2 = [rbf_kernel(x2,gp.x[i,:],β2,gp.β[k,:],gp.γ,gp.η) for i=1:gp.n,k=1:gp.n_β]
-    kval - k1[:]'*(gp.L'\(gp.L\k2[:]))
+    kval - k1[:]'*(gp.evecs*(gp.evecs'k2[:]./gp.evals))
 end
