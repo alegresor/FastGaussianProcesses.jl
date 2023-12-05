@@ -12,7 +12,7 @@ Below $m_n$ is the posterior mean, $\sigma_n^2$ the posterior variance, and
 
 $$f(x) = ???.$$
 
-![image](./assets/gp.1s.latticeseqb2.svg)
+![image](./assets/optim.1s.latticeseqb2.svg)
 
 ## References
 
