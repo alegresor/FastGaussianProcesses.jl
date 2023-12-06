@@ -3,8 +3,8 @@ module FastGaussianProcesses
 using QMCGenerators
 import FFTW: fft
 import Hadamard: fwht_natural
-import LinearAlgebra: logdet,tr,diagm,eigen
-import Printf: @printf
+import LinearAlgebra: logdet,tr,diagm,eigen,Symmetric
+import Printf: @printf,@sprintf
 import CairoMakie
 using LaTeXStrings
 import Distributions: quantile,Normal

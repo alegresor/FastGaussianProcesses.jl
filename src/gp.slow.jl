@@ -21,7 +21,7 @@ mutable struct GaussianProcessRBF
     NEGVARTHRESHOLD::Float64
 end
 
-function GaussianProcessRBF(x::Matrix{Float64},y::Matrix{Float64};β::Union{Nothing,Matrix{Int64}}=nothing,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-12,optim_steps::Int64=320,learningrate::Float64=1e-1,decayrate::Float64=.9,verbose::Int64=40,NEGVARTHRESHOLD::Float64=-1e-12)
+function GaussianProcessRBF(x::Matrix{Float64},y::Matrix{Float64};β::Union{Nothing,Matrix{Int64}}=nothing,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-12,optim_steps::Int64=320,learningrate::Float64=1e-1,decayrate::Float64=.9,verbose::Int64=40,NEGVARTHRESHOLD::Float64=-1e-8)
     n,s = size(x)
     if β===nothing β = zeros(Int64,1,s) else @assert size(β,2)==s "β must be a two dimensional matrix of size (n_β,s)" end; @assert β[1,:]==zeros(s); 
     n_β = size(β,1); @assert all(0 .≤ β .≤ 1); @assert all(0 .≤ sum(β,dims=2) .≤ 1)
@@ -59,9 +59,9 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
             for i=1:gp.n,j=1:gp.n k_com[rs+i,cs+j] = rbf_kernel(gp.x[i,:],gp.x[j,:],gp.β[k,:],gp.β[l,:],gp.γ,gp.η) end 
         end
         k_nsy .= k_com; for k=1:gp.n_β k_nsy[(k-1)*gp.n+1:k*gp.n,(k-1)*gp.n+1:k*gp.n] .+= diagm(gp.ζ[k]*ones(Float64,gp.n)) end
-        decomp = eigen((k_nsy + k_nsy')./2 ); gp.evecs .= decomp.vectors; gp.evals .= max.(decomp.values,0.) # k_nsy = evecs*diagm(evals)*evecs'
+        decomp = eigen(Symmetric((k_nsy + k_nsy')./2)); gp.evecs .= decomp.vectors; gp.evals .= max.(decomp.values,1e-32) # k_nsy ≈ evecs*diagm(evals)*evecs'
         gp.ν = gp.evecs*(gp.evecs'*gp.y[:]./gp.evals)
-        gp.losses[step] = sum(log.(max.(gp.evals,eps(Float64))))+gp.y[:]'*gp.ν
+        gp.losses[step] = sum(log.(gp.evals))+gp.y[:]'*gp.ν
         if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,gp.losses[step]); end
         if step == gp.optim_steps+1 break end 
         ∂k∂γ .= k_com./gp.γ
