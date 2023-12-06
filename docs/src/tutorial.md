@@ -3,6 +3,7 @@ DocTestSetup = quote
     using FastGaussianProcesses
     using QMCGenerators
     using Printf
+    using CairoMakie
     Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 end
 ```
@@ -45,7 +46,6 @@ Figure()
 ```
 
 ![image](./assets/kernels.lines.latticeseqb2.svg)
-
 
 ### Digital Kernels
 
@@ -209,3 +209,28 @@ Figure()
 ![image](./assets/optim.2s.rbf.svg)
 
 ![image](./assets/gp.2s.rbf.svg)
+
+## Logo 
+
+In the following we must be 
+```julia 
+using CairoMakie
+```
+
+```jldoctest plots; output = false
+m = 2; n = 2^m
+x = FirstLinear(RandomDigitalShift(DigitalSeqB2G(1),1,11),m)[:,1]
+kmat = Matrix{Float64}(undef,2*n,2*n)
+for i1=1:n,i2=1:n,β1=0:1,β2=0:1 kmat[β1*n+i1,β2*n+i2] = ((β1+β2)==0)+kernel_digshiftinvar_s1(x[i1],x[i2],β1,β2,4) end 
+fig = Figure(resolution=(400,400),backgroundcolor=:transparent)
+ax = Axis(fig[1,1],backgroundcolor=:transparent)
+heatmap!(ax,1:2*n,2*n:-1:1,kmat,colormap=:julia_colorscheme)#:nipy_spectral) # https://docs.juliahub.com/MakieGallery/Ql23q/0.2.17/generated/colors.html
+hlines!(ax,[n+1/2],color=:black,linewidth=2.); vlines!(ax,[n+1/2],color=:black,linewidth=2.)
+hidespines!(ax); hidedecorations!(ax); hidexdecorations!(ax,grid = false); hideydecorations!(ax, ticks = false)
+save(joinpath(PLOTDIR,"logo.svg"),fig)
+save(joinpath(PLOTDIR,"favicon.png"),fig,px_per_unit=16)
+# output
+CairoMakie.Screen{IMAGE}
+```
+
+![image](./assets/logo.svg)
