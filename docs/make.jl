@@ -6,10 +6,7 @@ assetsdir = joinpath(@__DIR__,"src/assets")
 if ~isdir(assetsdir) mkdir(assetsdir) end
 
 println("DOCTEST")
-makedocs(
-    doctest = :only,
-    strict = true
-)
+makedocs(doctest = :only)
 
 println("BUILDING DOCS")
 makedocs(

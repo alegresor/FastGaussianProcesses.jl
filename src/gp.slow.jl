@@ -59,9 +59,9 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
             for i=1:gp.n,j=1:gp.n k_com[rs+i,cs+j] = rbf_kernel(gp.x[i,:],gp.x[j,:],gp.β[k,:],gp.β[l,:],gp.γ,gp.η) end 
         end
         k_nsy .= k_com; for k=1:gp.n_β k_nsy[(k-1)*gp.n+1:k*gp.n,(k-1)*gp.n+1:k*gp.n] .+= diagm(gp.ζ[k]*ones(Float64,gp.n)) end
-        decomp = eigen((k_nsy + k_nsy')./2 ); gp.evecs .= decomp.vectors; gp.evals .= max.(decomp.values,0) # k_nsy = evecs*diagm(evals)*evecs'
+        decomp = eigen((k_nsy + k_nsy')./2 ); gp.evecs .= decomp.vectors; gp.evals .= max.(decomp.values,0.) # k_nsy = evecs*diagm(evals)*evecs'
         gp.ν = gp.evecs*(gp.evecs'*gp.y[:]./gp.evals)
-        gp.losses[step] = logdet(gp.evecs*diagm(gp.evals)*gp.evecs')+gp.y[:]'*gp.ν
+        gp.losses[step] = sum(log.(max.(gp.evals,eps(Float64))))+gp.y[:]'*gp.ν
         if verbosebool && step%verbose==0 @printf("\tstep %-7i %.1e\n",step,gp.losses[step]); end
         if step == gp.optim_steps+1 break end 
         ∂k∂γ .= k_com./gp.γ
