@@ -16,19 +16,38 @@ mutable struct GaussianProcessRBF
     ηs::Matrix{Float64}
     ζs::Matrix{Float64}
     optim_steps::Int64
-    learningrate::Float64
-    decayrate::Float64
+    learnrate::Vector{Float64}
+    decayrate::Vector{Float64}
     NEGVARTHRESHOLD::Float64
 end
 
-function GaussianProcessRBF(x::Matrix{Float64},y::Matrix{Float64};β::Union{Nothing,Matrix{Int64}}=nothing,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-12,optim_steps::Int64=320,learningrate::Float64=1e-1,decayrate::Float64=.9,verbose::Int64=40,NEGVARTHRESHOLD::Float64=-1e-8)
+function GaussianProcessRBF(
+        x::Matrix{Float64},
+        y::Matrix{Float64};
+        β::Union{Nothing,Matrix{Int64}} = nothing,
+        γ::Float64 = 1.,
+        η::Union{Float64,Vector{Float64}} = 1.,
+        ζ::Union{Float64,Vector{Float64}} = 1e-12,
+        optim_steps::Int64 = 320,
+        learnrate_γ::Float64 = 1e-1,
+        learnrate_η::Union{Float64,Vector{Float64}} = 1e-1,
+        learnrate_ζ::Union{Float64,Vector{Float64}} = 0.,
+        decayrate_γ::Float64 = .9,
+        decayrate_η::Union{Float64,Vector{Float64}} = .9,
+        decayrate_ζ::Union{Float64,Vector{Float64}} = .9,
+        verbose::Int64 = 40,
+        NEGVARTHRESHOLD::Float64 = -1e-8)
     n,s = size(x)
     if β===nothing β = zeros(Int64,1,s) else @assert size(β,2)==s "β must be a two dimensional matrix of size (n_β,s)" end; @assert β[1,:]==zeros(s); 
     n_β = size(β,1); @assert all(0 .≤ β .≤ 1); @assert all(0 .≤ sum(β,dims=2) .≤ 1)
     @assert size(β,2) == s;   @assert size(y) == (n,n_β) "the number of columns in y must equal the number of rows of β"
     if typeof(η)==Float64 η = η*ones(Float64,s) else @assert size(η)==(s,) "η must be a vector of length s or a Float64 which gets copied to each element" end 
     if typeof(ζ)==Float64 ζ = ζ*ones(Float64,n_β) else @assert size(ζ)==(n_β,) "ζ must be a vector of length n_β or a Float64 which gets copied to each element" end
-    gp = GaussianProcessRBF(s,n,γ,η,ζ,β,n_β,x,y,Vector{Float64}(undef,n_β*n),Matrix{Float64}(undef,n_β*n,n_β*n),Vector{Float64}(undef,n_β*n),Vector{Float64}(undef,optim_steps+1),Vector{Float64}(undef,optim_steps+1),Matrix{Float64}(undef,optim_steps+1,s),Matrix{Float64}(undef,optim_steps+1,n_β),optim_steps,learningrate,decayrate,NEGVARTHRESHOLD)
+    if typeof(learnrate_η)==Float64 learnrate_η = learnrate_η*ones(Float64,s) else @assert size(learnrate_η)==(s,) "learnrate_η must be a vector of length s or a Float64 which gets copied to each element" end
+    if typeof(learnrate_ζ)==Float64 learnrate_ζ = learnrate_ζ*ones(Float64,n_β) else @assert size(learnrate_ζ)==(n_β,) "learnrate_ζ must be a vector of length n_β or a Float64 which gets copied to each element" end
+    if typeof(decayrate_η)==Float64 decayrate_η = decayrate_η*ones(Float64,s) else @assert size(decayrate_η)==(s,) "decayrate_η must be a vector of length s or a Float64 which gets copied to each element" end
+    if typeof(decayrate_ζ)==Float64 decayrate_ζ = decayrate_ζ*ones(Float64,n_β) else @assert size(decayrate_ζ)==(n_β,) "decayrate_ζ must be a vector of length n_β or a Float64 which gets copied to each element" end
+    gp = GaussianProcessRBF(s,n,γ,η,ζ,β,n_β,x,y,Vector{Float64}(undef,n_β*n),Matrix{Float64}(undef,n_β*n,n_β*n),Vector{Float64}(undef,n_β*n),Vector{Float64}(undef,optim_steps+1),Vector{Float64}(undef,optim_steps+1),Matrix{Float64}(undef,optim_steps+1,s),Matrix{Float64}(undef,optim_steps+1,n_β),optim_steps,vcat(learnrate_γ,learnrate_η,learnrate_ζ),vcat(decayrate_γ,decayrate_η,decayrate_ζ),NEGVARTHRESHOLD)
     _train(gp,verbose) 
 end
 function GaussianProcessRBF(f::Function,seq::IIDU01Seq,n::Int64;kwargs...) 
@@ -78,8 +97,8 @@ function _train(gp::GaussianProcessRBF,verbose::Int64)
         ∂k∂θ[gp.s+2:end,:,:] .= ∂k∂ζ
         for j=1:p ∂L∂θ[j,:,:] .= sum(map(k->(gp.evecs*(gp.evecs'*∂k∂θ[j,k,:]./gp.evals))[k],1:gp.n_β*gp.n))-gp.ν'*∂k∂θ[j,:,:]*gp.ν end
         ∂L∂logθ .= ∂L∂θ.*θ # since ∂θ∂logθ = θ
-        Δ .= gp.decayrate*Δ.+(1-gp.decayrate)*∂L∂logθ.^2
-        θ .= exp.(log.(θ)-gp.learningrate*Δ.^(-1/2).*∂L∂logθ)
+        Δ .= gp.decayrate.*Δ.+(1 .- gp.decayrate).*∂L∂logθ.^2
+        θ .= exp.(log.(θ)-gp.learnrate.*Δ.^(-1/2).*∂L∂logθ)
         gp.γ = θ[1]; gp.η .= θ[2:1+gp.s]; gp.ζ .= θ[2+gp.s:end]
     end
     gp

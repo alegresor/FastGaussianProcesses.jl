@@ -17,14 +17,31 @@ mutable struct FastGaussianProcess
     ηs::Matrix{Float64}
     ζs::Matrix{Float64}
     optim_steps::Int64
-    learningrate::Float64
-    decayrate::Float64
+    learnrate::Vector{Float64}
+    decayrate::Vector{Float64}
     kernel_1s::Function
     ft::Function # V*a = ft(a),      V^H*a = conj.(ft(conj.(a)))
     NEGVARTHRESHOLD::Float64
 end
 
-function FastGaussianProcess(f::Function,seq::Union{LatticeSeqB2,RandomShift,DigitalSeqB2G,RandomDigitalShift},n::Int64;β::Union{Nothing,Matrix{Int64}}=nothing,α::Int64=4,γ::Float64=1.,η::Union{Float64,Vector{Float64}}=1.,ζ::Union{Float64,Vector{Float64}}=1e-16,optim_steps::Int64=320,learningrate::Float64=1e-1,decayrate::Float64=.9,verbose::Int64=40,NEGVARTHRESHOLD::Float64=-1e-8)
+function FastGaussianProcess(
+        f::Function,
+        seq::Union{LatticeSeqB2,RandomShift,DigitalSeqB2G,RandomDigitalShift},
+        n::Int64;
+        β::Union{Nothing,Matrix{Int64}} = nothing,
+        α::Int64 = 4,
+        γ::Float64 = 1.,
+        η::Union{Float64,Vector{Float64}} = 1.,
+        ζ::Union{Float64,Vector{Float64}} = 1e-12,
+        optim_steps::Int64 = 320,
+        learnrate_γ::Float64 = 1e-1,
+        learnrate_η::Union{Float64,Vector{Float64}} = 1e-1,
+        learnrate_ζ::Union{Float64,Vector{Float64}} = 0.,
+        decayrate_γ::Float64 = .9,
+        decayrate_η::Union{Float64,Vector{Float64}} = .9,
+        decayrate_ζ::Union{Float64,Vector{Float64}} = .9,
+        verbose::Int64 = 40,
+        NEGVARTHRESHOLD::Float64 = -1e-8)
     s = typeof(seq) in [LatticeSeqB2,DigitalSeqB2G] ? seq.s : seq.seq.s
     if β===nothing β = zeros(Int64,1,s) else @assert size(β,2)==s "β must be a two dimensional matrix of size (n_β,s)" end
     n_β = size(β,1)
@@ -47,8 +64,12 @@ function FastGaussianProcess(f::Function,seq::Union{LatticeSeqB2,RandomShift,Dig
     end 
     if typeof(η)==Float64 η = η*ones(Float64,s) else @assert size(η)==(s,) "η must be a vector of length s or a Float64 which gets copied to each element" end 
     if typeof(ζ)==Float64 ζ = ζ*ones(Float64,n_β) else @assert size(ζ)==(n_β,) "ζ must be a vector of length n_β or a Float64 which gets copied to each element" end
+    if typeof(learnrate_η)==Float64 learnrate_η = learnrate_η*ones(Float64,s) else @assert size(learnrate_η)==(s,) "learnrate_η must be a vector of length s or a Float64 which gets copied to each element" end
+    if typeof(learnrate_ζ)==Float64 learnrate_ζ = learnrate_ζ*ones(Float64,n_β) else @assert size(learnrate_ζ)==(n_β,) "learnrate_ζ must be a vector of length n_β or a Float64 which gets copied to each element" end
+    if typeof(decayrate_η)==Float64 decayrate_η = decayrate_η*ones(Float64,s) else @assert size(decayrate_η)==(s,) "decayrate_η must be a vector of length s or a Float64 which gets copied to each element" end
+    if typeof(decayrate_ζ)==Float64 decayrate_ζ = decayrate_ζ*ones(Float64,n_β) else @assert size(decayrate_ζ)==(n_β,) "decayrate_ζ must be a vector of length n_β or a Float64 which gets copied to each element" end
     y = reshape(vcat([f(x[i,:]) for i=1:n]'...),n,n_β)
-    gp = FastGaussianProcess(s,n,α,γ,η,ζ,β,n_β,_x,x,y,Array{FTDataType}(undef,n,n_β,n_β),Matrix{Float64}(undef,n,n_β),Vector{Float64}(undef,optim_steps+1),Vector{Float64}(undef,optim_steps+1),Matrix{Float64}(undef,optim_steps+1,s),Matrix{Float64}(undef,optim_steps+1,n_β),optim_steps,learningrate,decayrate,kernel_1s,ft,NEGVARTHRESHOLD)
+    gp = FastGaussianProcess(s,n,α,γ,η,ζ,β,n_β,_x,x,y,Array{FTDataType}(undef,n,n_β,n_β),Matrix{Float64}(undef,n,n_β),Vector{Float64}(undef,optim_steps+1),Vector{Float64}(undef,optim_steps+1),Matrix{Float64}(undef,optim_steps+1,s),Matrix{Float64}(undef,optim_steps+1,n_β),optim_steps,vcat(learnrate_γ,learnrate_η,learnrate_ζ),vcat(decayrate_γ,decayrate_η,decayrate_ζ),kernel_1s,ft,NEGVARTHRESHOLD)
     _train(gp,verbose) 
 end
 
@@ -96,8 +117,8 @@ function _train(gp::FastGaussianProcess,verbose::Int64)
         ∂λ∂θ .= sqrt(gp.n).*conj.(gp.ft(∂k∂θ,2))
         ∂L∂θ .= real.([sum(map(i->tr(gp.λ[i,:,:]\∂λ∂θ[j,i,:,:])-ν_hft[i,:]'*∂λ∂θ[j,i,:,:]*ν_hft[i,:],1:gp.n)) for j=1:p])
         ∂L∂logθ .= ∂L∂θ.*θ # since ∂θ∂logθ = θ
-        Δ .= gp.decayrate*Δ.+(1-gp.decayrate)*∂L∂logθ.^2
-        θ .= exp.(log.(θ)-gp.learningrate*Δ.^(-1/2).*∂L∂logθ)
+        Δ .= gp.decayrate.*Δ.+(1 .- gp.decayrate).*∂L∂logθ.^2
+        θ .= exp.(log.(θ)-gp.learnrate.*Δ.^(-1/2).*∂L∂logθ)
         gp.γ = θ[1]; gp.η .= θ[2:1+gp.s]; gp.ζ .= θ[2+gp.s:end]
     end
     gp.ν .= real.(gp.ft(ν_hft,1))
