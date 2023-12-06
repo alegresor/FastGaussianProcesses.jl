@@ -228,7 +228,6 @@ heatmap!(ax,1:2*n,2*n:-1:1,kmat,colormap=:julia_colorscheme)#:nipy_spectral) # h
 hlines!(ax,[n+1/2],color=:black,linewidth=2.); vlines!(ax,[n+1/2],color=:black,linewidth=2.)
 hidespines!(ax); hidedecorations!(ax); hidexdecorations!(ax,grid = false); hideydecorations!(ax, ticks = false)
 save(joinpath(PLOTDIR,"logo.svg"),fig)
-save(joinpath(PLOTDIR,"favicon.png"),fig,px_per_unit=16)
 # output
 CairoMakie.Screen{IMAGE}
 ```
