@@ -229,7 +229,7 @@ hlines!(ax,[n+1/2],color=:black,linewidth=2.); vlines!(ax,[n+1/2],color=:black,l
 hidespines!(ax); hidedecorations!(ax); hidexdecorations!(ax,grid = false); hideydecorations!(ax, ticks = false)
 save(joinpath(PLOTDIR,"logo.svg"),fig)
 # output
-CairoMakie.Screen{IMAGE}
+CairoMakie.Screen{SVG}
 ```
 
 ![image](./assets/logo.svg)
