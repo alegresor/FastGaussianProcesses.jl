@@ -1,3 +1,3 @@
-# FastGaussianProcesses.jl
+# Fast Gaussian Process Regression with Gradient Information
 
-Gaussian Processes fit to $n$ data points at $\mathcal{O}(n \log n)$ cost when one has control over the design of experiments. 
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://alegresor.github.io/FastGaussianProcesses.jl/dev)
