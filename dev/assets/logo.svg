@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="300pt" height="300pt" viewBox="0 0 300 300" version="1.1">
-<defs>
-<clipPath id="clip1-sAjpmECO">
-  <path d="M 12 149 L 288 149 L 288 151 L 12 151 Z M 12 149 "/>
-</clipPath>
-<clipPath id="clip2-sAjpmECO">
-  <path d="M 149 12 L 151 12 L 151 288 L 149 288 Z M 149 12 "/>
-</clipPath>
-</defs>
-<g id="surface1-sAjpmECO">
+<g id="surface1-5AiidhLc">
 <path style=" stroke:none;fill-rule:nonzero;fill:rgb(44.772187%,45.327827%,16.916278%);fill-opacity:1;" d="M 12 12 L 46.875 12 L 46.875 46.875 L 12 46.875 Z M 12 12 "/>
 <path style=" stroke:none;fill-rule:nonzero;fill:rgb(57.164776%,37.560982%,18.013579%);fill-opacity:1;" d="M 12 46.125 L 46.875 46.125 L 46.875 81.375 L 12 81.375 Z M 12 46.125 "/>
 <path style=" stroke:none;fill-rule:nonzero;fill:rgb(52.208513%,40.667292%,17.574672%);fill-opacity:1;" d="M 12 80.625 L 46.875 80.625 L 46.875 115.875 L 12 115.875 Z M 12 80.625 "/>
@@ -73,11 +65,5 @@
 <path style=" stroke:none;fill-rule:nonzero;fill:rgb(28.279704%,55.664271%,15.456001%);fill-opacity:1;" d="M 253.125 184.125 L 288 184.125 L 288 219.375 L 253.125 219.375 Z M 253.125 184.125 "/>
 <path style=" stroke:none;fill-rule:nonzero;fill:rgb(47.768414%,43.449968%,17.181557%);fill-opacity:1;" d="M 253.125 218.625 L 288 218.625 L 288 253.875 L 253.125 253.875 Z M 253.125 218.625 "/>
 <path style=" stroke:none;fill-rule:nonzero;fill:rgb(58.399999%,34.5%,69.800001%);fill-opacity:1;" d="M 253.125 253.125 L 288 253.125 L 288 288 L 253.125 288 Z M 253.125 253.125 "/>
-<g clip-path="url(#clip1-sAjpmECO)" clip-rule="nonzero">
-<path style="fill:none;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:2;" d="M 16 200 L 384 200 " transform="matrix(0.75,0,0,0.75,0,0)"/>
-</g>
-<g clip-path="url(#clip2-sAjpmECO)" clip-rule="nonzero">
-<path style="fill:none;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:2;" d="M 200 384 L 200 16 " transform="matrix(0.75,0,0,0.75,0,0)"/>
-</g>
 </g>
 </svg>
