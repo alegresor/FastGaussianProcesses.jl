@@ -25,6 +25,6 @@ makedocs(
 println("DEPLOY DOCS")
 deploydocs(
     repo = "github.com/alegresor/FastGaussianProcesses.jl.git",
-    #devbranch = "main",
-    #versions = ["stable" => "v^", "main" => "main"]
+    devbranch = "main",
+    versions = ["stable" => "v^"]
 )
