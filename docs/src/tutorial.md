@@ -225,7 +225,6 @@ for i1=1:n,i2=1:n,β1=0:1,β2=0:1 kmat[β1*n+i1,β2*n+i2] = ((β1+β2)==0)+kerne
 fig = Figure(resolution=(400,400),backgroundcolor=:transparent)
 ax = Axis(fig[1,1],backgroundcolor=:transparent)
 heatmap!(ax,1:2*n,2*n:-1:1,kmat,colormap=:julia_colorscheme)#:nipy_spectral) # https://docs.juliahub.com/MakieGallery/Ql23q/0.2.17/generated/colors.html
-hlines!(ax,[n+1/2],color=:black,linewidth=2.); vlines!(ax,[n+1/2],color=:black,linewidth=2.)
 hidespines!(ax); hidedecorations!(ax); hidexdecorations!(ax,grid = false); hideydecorations!(ax, ticks = false)
 save(joinpath(PLOTDIR,"logo.svg"),fig)
 # output

@@ -121,9 +121,7 @@ function plot_gp_optimization(gp::Union{FastGaussianProcess,GaussianProcessRBF};
         yscale = log10,
         backgroundcolor = backgroundcolor)
     for l=1:gp.n_β CairoMakie.lines!(axζ,xrange,gp.ζs[:,l],color=(JULIA4LOGOCOLORS[4],(gp.n_β-l+1)/gp.n_β),linewidth=3) end 
-    CairoMakie.xlims!(axζ,0,noptsp1-1)
-    CairoMakie.linkxaxes!(axloss,axη)
-    CairoMakie.linkxaxes!(axγ,axζ)
+    CairoMakie.xlims!(axloss,0,noptsp1-1); CairoMakie.xlims!(axζ,0,noptsp1-1); CairoMakie.xlims!(axη,0,noptsp1-1); CairoMakie.xlims!(axζ,0,noptsp1-1)
     if figpath !== nothing CairoMakie.save(figpath,fig,px_per_unit=px_per_unit) end 
     return fig
 end
