@@ -18,7 +18,7 @@ function kernel_digshiftinvar_s1(_x1::UInt64,_x2::UInt64,β1::Int64,β2::Int64,�
     x = _x * 2. ^(-t)
     β = x == 0 ? 0 : Int64(-floor(log2(x)))
     ktildeidx = α-β1-β2
-    (-2)^(β1+β2)*DSKERNELFUNCSLOW[ktildeidx](β,x,_x,t)
+    (-2)^(β1+β2)*DSKERNELFUNCSLOW[ktildeidx](β,x,_x,t) - (β1+β2==0)
 end 
 kernel_digshiftinvar_s1(_x1::UInt64,x2::Float64,β1::Int64,β2::Int64,α::Int64,t::Int64) = kernel_digshiftinvar_s1(_x1,Float64ToBinary(x2,t),β1,β2,α,t)
 kernel_digshiftinvar_s1(x1::Float64,_x2::UInt64,β1::Int64,β2::Int64,α::Int64,t::Int64) = kernel_digshiftinvar_s1(Float64ToBinary(x1,t),_x2,β1,β2,α,t)
