@@ -154,6 +154,6 @@ end
 
 function var_post(gp::FastGaussianProcess,x::Vector{Float64};β::Union{Nothing,Vector{Int64}}=nothing)
     var = cov_post(gp,x,x;β1=β,β2=β)
-    @assert var > gp.NEGVARTHRESHOLD "variance less than NEGVARTHRESHOLD = $NEGVARTHRESHOLD"
+    @assert var > gp.NEGVARTHRESHOLD "variance $var less than NEGVARTHRESHOLD = $(gp.NEGVARTHRESHOLD)"
     gp.NEGVARTHRESHOLD<var<0 ? 0. : var
 end

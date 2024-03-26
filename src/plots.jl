@@ -143,7 +143,7 @@ function plot_gp_1s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{N
         CairoMakie.scatter!(ax,xticks,yhatticks,color=JULIA4LOGOCOLORS[1],markersize=markersize/2,label=latexstring("\$m_n^{($po)}(x)\$"))
         stdhatticks = sqrt.(map(xtick->var_post(gp,[xtick];β=[po]),xticks))
         ci_low,ci_high = yhatticks.-q*stdhatticks,yhatticks.+q*stdhatticks
-        CairoMakie.band!(ax,xticks,ci_low,ci_high,color=(JULIA4LOGOCOLORS[1],.25),label=latexstring("\$m_n^{($po)}(x) \\pm $(round(q,digits=2)) \\; \\sigma_n^{($pi)}(x)\$"))
+        CairoMakie.band!(ax,xticks,ci_low,ci_high,color=(JULIA4LOGOCOLORS[1],.25),label=latexstring("\$m_n^{($po)}(x) \\pm $(round(q,digits=2)) \\; \\sigma_n^{($po)}(x)\$"))
         if idx!==nothing CairoMakie.scatter!(ax,gp.x[:,1],gp.y[:,idx],markersize=markersize,color=:black,label=latexstring("\$(y^{($po)}_i)_{i=1}^{$(gp.n)}\$")) end 
         CairoMakie.Legend(fig[2*i-1,1],ax,orientation=:horizontal,framevisible=false) 
     end

@@ -1,5 +1,6 @@
 # personal
 ags/*
+*.DS_Store
 docs/src/assets/*
 !docs/src/assets/favicon.ico
 
