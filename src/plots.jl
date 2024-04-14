@@ -134,7 +134,7 @@ function plot_gp_1s(gp::Union{FastGaussianProcess,GaussianProcessRBF};f::Union{N
     q = quantile(Normal(),1-uncertainty/2)
     if f!==nothing yticks = reshape(vcat([f([xticks[i]]) for i=1:nxticks]'...),nxticks,gp.n_β) end 
     for i=1:n
-        ax = CairoMakie.Axis(fig[2*i,1],xlabel=L"$x$")
+        ax = CairoMakie.Axis(fig[2*i,1],xlabel=L"$x$",backgroundcolor=backgroundcolor)
         CairoMakie.xlims!(ax,xmin,xmax)
         po = β[i]
         idx = findfirst(x->x==po,gp.β[:,1])
